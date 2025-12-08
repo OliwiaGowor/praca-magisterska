@@ -63,6 +63,52 @@ function res = run_benchmarks(data, config)
             warning('ChaCha20 (MATLAB) error: %s', ME.message); 
             fprintf('%s\n', getReport(ME));
         end
+        
+        % --- 9. 3D Logistic + Chirikov (MATLAB) ---
+        try
+            [t_enc, t_dec, C1, C2, PT] = algo_chaos_map_matlab(data);
+            res = helper_update_metrics(res, 9, run_idx, t_enc, t_dec, C1, C2, PT);
+        catch ME
+            warning('Chaotic Map (MATLAB) error: %s', ME.message);
+            fprintf('%s\n', getReport(ME));
+        end
+        
+        % --- 10. Chaos Bit Shuffling (Moysis) ---
+        try
+            [t_enc, t_dec, C1, C2, PT] = algo_chaos_bit_shuffling(data);
+            res = helper_update_metrics(res, 10, run_idx, t_enc, t_dec, C1, C2, PT);
+        catch ME
+            warning('Chaos Bit Shuffling error: %s', ME.message);
+            % Opcjonalnie wypisz pełny błąd dla debugowania, bo ten algorytm jest skomplikowany
+            % fprintf('%s\n', getReport(ME));
+        end
+        
+        % % --- 11. Hyperchaotic 2D (S. Liu et al.) ---
+        try
+            % index 11 musi odpowiadać pozycji w config.titles
+            [t_enc, t_dec, C1, C2, PT] = algo_hyperchaotic_2d_matlab(data);
+            res = helper_update_metrics(res, 11, run_idx, t_enc, t_dec, C1, C2, PT);
+        catch ME
+            warning('Hyperchaotic 2D error: %s', ME.message);
+            fprintf('%s\n', getReport(ME));
+        end
+        
+        % --- 12. Hu & Tian (Two-Stage Logistic) ---
+        try
+            [t_enc, t_dec, C1, C2, PT] = algo_hu_tian(data);
+            res = helper_update_metrics(res, 12, run_idx, t_enc, t_dec, C1, C2, PT);
+        catch ME
+            warning('Hu & Tian error: %s', ME.message);
+            % fprintf('%s\n', getReport(ME)); 
+        end
+        
+        % --- 13. Entropy Wavelet-Chaos (Pourasad et al.) ---
+        try
+            [t_enc, t_dec, C1, C2, PT] = algo_entropy_pourasad(data);
+            res = helper_update_metrics(res, 13, run_idx, t_enc, t_dec, C1, C2, PT);
+        catch ME
+            warning('Entropy Algo error: %s', ME.message);
+        end
     end
 end
 
