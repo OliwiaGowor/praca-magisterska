@@ -1,6 +1,7 @@
 function [out1, out2] = entropy_adapter(mode, varargin)
     % ENTROPY_ADAPTER - Implementacja logiki Pourasad et al. (2021)
     % Obsługuje: Encrypt, Decrypt.
+    % Wymaga: Wavelet Toolbox (dwt2, idwt2)
     
     if strcmp(mode, 'encrypt')
         [out1, out2] = encrypt_core(varargin{1}); % out1=Img, out2=KeysStruct
@@ -72,14 +73,13 @@ function [encryptedImage, keys] = encrypt_core(inputImage)
     
     encryptedImageDouble = idwt2(ncA, ncH, ncV, ncD, 'haar');
     
-    % Normalizacja do 0-255 uint8
+    % Normalizacja do 0-255 uint8 (Operacja stratna!)
     encryptedImage = uint8(mat2gray(encryptedImageDouble) * 255);
     
     % Zapisywanie kluczy/parametrów do deszyfrowania
     keys.key_matrix = key_matrix;
     keys.idxRow = idxRow;
     keys.idxCol = idxCol;
-    keys.orig_range = [min(encryptedImageDouble(:)), max(encryptedImageDouble(:))]; % Opcjonalne, dla lepszej wierności IDWT
 end
 
 % =========================================================
@@ -89,11 +89,6 @@ function P_recovered = decrypt_core(encryptedImage, keys)
     % Konwersja do double
     encryptedImage = double(encryptedImage);
     
-    % Uwaga: DWT/IDWT wprowadza błędy zaokrągleń (float), co utrudnia 
-    % bezstratne odzyskanie przy prostym rzutowaniu uint8.
-    % W tym algorytmie "mat2gray" niszczy oryginalną amplitudę.
-    % Spróbujemy odtworzyć proces odwrotny na znormalizowanym obrazie.
-    
     % --- 1. Decomposition (DWT) ---
     % Odzyskujemy pomieszane współczynniki z zaszyfrowanego obrazu
     [cA, cH, cV, cD] = dwt2(encryptedImage, 'haar');
@@ -101,7 +96,8 @@ function P_recovered = decrypt_core(encryptedImage, keys)
     
     % --- 2. Inverse Confusion (Permutation) ---
     % Odwracanie permutacji wierszy i kolumn
-    % A(idx) = B  =>  Temp(idx) = B rows/cols
+    % Forward: Dest(idx) = Source
+    % Reverse: Source(idx) = Dest
     
     % Odwracanie wierszy
     temp_rows = zeros(size(confusedCoeffs));
@@ -121,7 +117,9 @@ function P_recovered = decrypt_core(encryptedImage, keys)
     ncD = coeffs(half_m+1:end, half_n+1:end);
     
     diffusedImageDouble = idwt2(ncA, ncH, ncV, ncD, 'haar');
-    diffusedImage = uint8(diffusedImageDouble); % Rzutowanie
+    
+    % Rzutowanie (Przyjmujemy stratność algorytmu)
+    diffusedImage = uint8(diffusedImageDouble); 
     
     % --- 4. Inverse Diffusion ---
     % Forward: D = ~ (I XOR K)

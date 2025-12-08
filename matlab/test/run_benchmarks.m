@@ -102,13 +102,6 @@ function res = run_benchmarks(data, config)
             % fprintf('%s\n', getReport(ME)); 
         end
         
-        % --- 13. Entropy Wavelet-Chaos (Pourasad et al.) ---
-        try
-            [t_enc, t_dec, C1, C2, PT] = algo_entropy_pourasad(data);
-            res = helper_update_metrics(res, 13, run_idx, t_enc, t_dec, C1, C2, PT);
-        catch ME
-            warning('Entropy Algo error: %s', ME.message);
-        end
     end
 end
 

@@ -7,7 +7,7 @@ function [t_enc, t_dec, C1, C2, PT] = algo_entropy_pourasad(data)
     img_mod  = data.img_mod;
     
     % Algorytm pracuje na Grayscale (wymóg DWT i logiki autora).
-    % Jeśli wejście jest RGB, konwertujemy (wynik PT będzie grayscale).
+    % Jeśli wejście jest RGB, konwertujemy.
     
     % 2. Szyfrowanie (Oryginał)
     tic;
@@ -15,7 +15,7 @@ function [t_enc, t_dec, C1, C2, PT] = algo_entropy_pourasad(data)
     t_enc = toc;
     
     % 3. Szyfrowanie (Zmodyfikowany) - dla metryk NPCR/UACI
-    % Używamy tych samych kluczy/parametrów, aby test był miarodajny
+    % Używamy tych samych kluczy, aby test był miarodajny
     [ct2, ~] = entropy_adapter('encrypt', img_mod);
     
     % 4. Deszyfrowanie
