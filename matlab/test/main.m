@@ -47,14 +47,14 @@ avg_results = process_results(raw_results, data, config);
 % 4. Visualization
 visualize_results(avg_results, raw_results, data, config);
 
-% --- Analiza Ataków ---
-run_attacks = true; % Ustaw na false jeśli chcesz pominąć (trwa dłużej)
+% --- Attack Analysis ---
+run_attacks = true; % Set to false to skip (computationally intensive)
 if run_attacks
-    % Upewnij się, że ścieżki są dodane
+    % Ensure metrics path is added
     addpath(fullfile(currentPath, 'metrics')); 
     
     fprintf('\n--- Uruchamianie rozszerzonej analizy ataków (Alteration Attacks) ---\n');
-    % Wywołujemy nową funkcję przekazując dane (obrazek)
+    % Run comprehensive alteration analysis
     run_alteration_analysis(data);
 end
 

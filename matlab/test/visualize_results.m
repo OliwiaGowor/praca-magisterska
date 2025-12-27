@@ -1,5 +1,5 @@
 function visualize_results(avg, raw, data, config)
-    % VISUALIZE_RESULTS - Generuje wykresy i tabele (Fixed for uitable error)
+    % VISUALIZE_RESULTS - Generates charts and tables (Fixed for uitable capture)
     
     titles = config.titles;
     num_algos = length(titles);
@@ -10,12 +10,12 @@ function visualize_results(avg, raw, data, config)
     resultsFolder = fullfile(scriptPath, 'results');
     if ~exist(resultsFolder, 'dir'), mkdir(resultsFolder); end
     
-    disp('Generowanie wizualizacji (Fix: uitable capture)...');
+    disp('Generowanie wizualizacji...');
 
     %% ============================================================
     %% FIGURE 1: METRICS REPORT (Chart + Wide Table)
     %% ============================================================
-    % Ustawiamy 'Visible', 'on' aby getframe zadziałało
+    % Set 'Visible', 'on' so getframe can capture it
     hFigMetrics = figure('Name', 'Raport Metryk', 'NumberTitle', 'off', ...
                          'Position', [50, 50, 1500, 850], 'Color', 'w', 'Visible', 'on');
     
@@ -26,7 +26,7 @@ function visualize_results(avg, raw, data, config)
     t_enc = avg.times_enc(:);
     t_dec = avg.times_dec(:);
     
-    % Zabezpieczenie wymiarów
+    % Dimension safety check
     min_len = min([length(t_enc), length(t_dec), length(titles)]);
     if length(t_enc) ~= length(titles)
         warning('Liczba wyników (%d) różni się od liczby tytułów (%d). Przycinam.', length(t_enc), length(titles));
@@ -85,18 +85,18 @@ function visualize_results(avg, raw, data, config)
             
     t.ColumnWidth = {350, 180, 180, 180, 180, 180, 180};
 
-    % --- FIX: Zapisywanie figury z tabelą (uitable) ---
+    % --- FIX: Saving figure with table (uitable) ---
     file_metrics = fullfile(resultsFolder, sprintf('report_metrics_%s.png', timestamp));
     
-    % Wymuszamy odświeżenie grafiki
+    % Force graphic refresh
     drawnow; 
     
     try
-        % Metoda 1: getframe (działa zawsze, jakość ekranowa)
+        % Method 1: getframe (works reliably, screen quality)
         frame = getframe(hFigMetrics);
         imwrite(frame.cdata, file_metrics);
     catch
-        % Fallback: próba użycia exportgraphics (nowsze MATLAB-y), jeśli getframe zawiedzie
+        % Fallback: try exportgraphics (newer MATLAB versions) if getframe fails
         try
             exportgraphics(hFigMetrics, file_metrics);
         catch
@@ -137,7 +137,7 @@ function visualize_results(avg, raw, data, config)
     end
 
     file_visuals = fullfile(resultsFolder, sprintf('report_visuals_%s.png', timestamp));
-    saveas(hFigVisuals, file_visuals); % Tutaj saveas jest bezpieczne (brak uitable)
+    saveas(hFigVisuals, file_visuals); % saveas is safe here (no uitable)
 
     fprintf('--------------------------------------------------\n');
     fprintf(' Raport Metryk:   %s\n', file_metrics);

@@ -4,7 +4,7 @@ function [t_enc, t_dec, C1, C2, PT] = algo_blowfish_matlab(data)
     % 1. Setup
     % Blowfish supports variable key lengths (e.g., 16 bytes = 128 bits)
     key = uint8(randi([0 255], 1, 16)); 
-    % IMPORTANT: Blowfish has a 64-bit block size, so IV must be 8 bytes!
+    % Blowfish has a 64-bit block size, so IV must be 8 bytes
     iv  = uint8(randi([0 255], 1, 8));  
     
     % Initialize engine (using the ImageBlowfish wrapper)
