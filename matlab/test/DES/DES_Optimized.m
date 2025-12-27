@@ -1,9 +1,5 @@
 classdef DES_Optimized < handle
     % DES_Optimized - Optimized Version (SP-Box + Permutation Lookups)
-    % Optimizations implemented:
-    % 1. SP-Network (S-Box + P combined)
-    % 2. IP/FP Permutations based on tables (8 x 256) instead of bit-loops
-    % 3. Uint64 arithmetic
     
     properties (Constant)
         PC1 = [57 49 41 33 25 17 9 1 58 50 42 34 26 18 10 2 59 51 43 35 27 19 11 3 60 52 44 36 63 55 47 39 31 23 15 7 62 54 46 38 30 22 14 6 61 53 45 37 29 21 13 5 28 20 12 4];
@@ -64,7 +60,7 @@ classdef DES_Optimized < handle
         
         function init_perm_lookups(obj)
             % Creates LUT tables for IP and FP.
-            % Concept: Instead of permuting 64 bits individually, we permute 8 bytes.
+            % Instead of permuting 64 bits individually, permute 8 bytes.
             % For each byte (0-255), we know exactly where its bits will end up.
             
             obj.IP_LUT = zeros(8, 256, 'uint64');
@@ -79,7 +75,7 @@ classdef DES_Optimized < handle
                     % Simulate input with only one byte set
                     testInput = bitshift(uint64(val), shiftAmt);
                     
-                    % Use the old (slow) function to calculate where bits land
+                    % Calculate where bits land
                     perm_IP = obj.slow_perm(testInput, obj.IP_Table);
                     perm_FP = obj.slow_perm(testInput, obj.FP_Table);
                     
@@ -99,7 +95,6 @@ classdef DES_Optimized < handle
             for i = 1:numBlocks
                 block = bitxor(plain64(i), prevBlock);
                 
-                % === OPTIMIZATION 1: Fast IP via Lookup ===
                 % Split block into 8 bytes and sum precomputed positions
                 block = bitxor(bitxor(bitxor( ...
                     obj.IP_LUT(1, bitshift(block, -56) + 1),       ...
@@ -117,7 +112,7 @@ classdef DES_Optimized < handle
                 L = uint32(bitshift(block, -32));
                 R = uint32(bitand(block, mask32));
                 
-                % 16 Feistel Rounds (Optimized)
+                % 16 Feistel Rounds
                 for r = 1:16
                     L_next = R;
                     K_curr = subKeys(r);
@@ -175,7 +170,6 @@ classdef DES_Optimized < handle
             for i = 1:numBlocks
                 currentCipher = cipher64(i);
                 
-                % Fast IP
                 block = bitxor(bitxor(bitxor( ...
                     obj.IP_LUT(1, bitshift(currentCipher, -56) + 1),       ...
                     obj.IP_LUT(2, bitand(bitshift(currentCipher, -48), 255) + 1)), ...
@@ -220,7 +214,6 @@ classdef DES_Optimized < handle
                 
                 preOut = bitor(bitshift(uint64(R), 32), uint64(L));
                 
-                % Fast FP
                 decryptedBlock = bitxor(bitxor(bitxor( ...
                     obj.FP_LUT(1, bitshift(preOut, -56) + 1),       ...
                     obj.FP_LUT(2, bitand(bitshift(preOut, -48), 255) + 1)), ...
@@ -240,7 +233,7 @@ classdef DES_Optimized < handle
         end
         
         function subKeys = generate_subkeys(obj, key64)
-            % Kept simple as it runs only ONCE per image
+            % It runs only once per image
             K56 = obj.slow_perm_56(key64, obj.PC1);
             C = uint32(bitshift(K56, -28));
             D = uint32(bitand(K56, 268435455)); 
@@ -254,7 +247,6 @@ classdef DES_Optimized < handle
             end
         end
         
-        % Legacy functions (slow), used now ONLY for table initialization
         function out = slow_perm(obj, in, table)
             out = uint64(0);
             for i = 1:64

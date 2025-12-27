@@ -1,5 +1,5 @@
 function [out1, out2] = chaos_bit_shuffling_optimized(mode, varargin)
-    % DYSPOZYTOR: Pozwala wywołać funkcje lokalne z zewnątrz
+    % DISPATCHER: Allows calling local functions from outside
     if strcmp(mode, 'encrypt')
         [out1, out2] = encrypt_image_opt(varargin{1});
     elseif strcmp(mode, 'decrypt')
@@ -23,9 +23,9 @@ function [Encryptedim, keys] = encrypt_image_opt(input_image)
     
     [rows, cols] = size(A);
     
-    % Bit decomposition - ZWEKTORYZOWANE
-    % Zamiast pętli po pikselach, operujemy na macierzach
-    % Abits będzie miało wymiar: rows x cols x 8
+    % Bit decomposition - VECTORIZED
+    % Instead of looping over pixels, operate on matrices
+    % Abits dimension: rows x cols x 8
     Abits = zeros(rows, cols, 8);
     for b = 1:8
         Abits(:,:,b) = bitget(A, b);
@@ -37,7 +37,7 @@ function [Encryptedim, keys] = encrypt_image_opt(input_image)
     total_sum = sum(A(:));
     AVG = mod(total_sum/(rows*cols), 1);
     
-    % Inicjalizacja parametrów (jak w oryginale)
+    % Parameter initialization (as in original)
     if AVG == 0
         AVG = mod(log(rows*cols + total_sum/(rows*cols)), 1);
     end
@@ -49,50 +49,50 @@ function [Encryptedim, keys] = encrypt_image_opt(input_image)
 
     keys = [x_val, mu1, a1, y_val, mu2, a2, z_val, mu3, a3, v_val, mu4, a4];
     
-    % Prealokacja buforów na sekwencje chaotyczne (dla szybkości)
-    % Zakładamy pesymistycznie, że pętla while może wykonać się więcej razy,
-    % ale tutaj alokujemy bufory robocze.
+    % Preallocate buffers for chaotic sequences (for speed)
+    % We assume pessimistically that the while loop might run more times,
+    % but here we allocate working buffers.
     
     % --- Shuffle Rows ---
-    % Zamiast mnożenia macierzy: shuffled(R,:,:) = shuffled(R, p_cols, p_bits)
+    % Instead of matrix multiplication: shuffled(R,:,:) = shuffled(R, p_cols, p_bits)
     
-    % Bufor na permutację kolumn (dla każdego wiersza inna)
+    % Buffer for column permutation (different for each row)
     p_cols = zeros(1, cols);
     p_bits = zeros(1, 8);
     
-    curr_x = x_val; % Lokalna kopia stanu
+    curr_x = x_val; % Local state copy
     
     for R = 1:rows
         if R ~= 1
-            % Update stanu dla nowego wiersza
+            % Update state for new row
             curr_x = cos(mu1*(curr_x^3+curr_x)+a1);
         end
         
-        % Generowanie permutacji kolumn (cols)
+        % Generating permutation for columns (cols)
         p_cols = generate_permutation(curr_x, mu1, a1, cols);
-        % Aktualizacja curr_x do ostatniej wartości z generatora
-        % (Generator zwraca permutację i ostatni stan, ale tutaj
-        % musimy zachować ciągłość logiczną oryginału. W oryginale
-        % zmienna 'x' jest nadpisywana w pętli while.
-        % Funkcja pomocnicza 'generate_permutation' zwraca też ostatnie x)
+        % Update curr_x to the last value from generator
+        % (Generator returns permutation and last state, but here
+        % we must maintain logic continuity. In original,
+        % variable 'x' is overwritten in while loop.
+        % Helper 'generate_permutation' returns last x too)
         [p_cols, curr_x] = generate_permutation(curr_x, mu1, a1, cols);
         
-        % Generowanie permutacji bitów (8)
+        % Generating permutation for bits (8)
         [p_bits, curr_x] = generate_permutation(curr_x, mu1, a1, 8);
         
-        % Zastosowanie permutacji (indeksowanie zamiast mnożenia macierzy)
+        % Applying permutation (indexing instead of matrix mult)
         % left * M * right -> M(left_perm, right_perm)
-        % Tutaj left to permutacja kolumn, right to permutacja bitów
-        % Ale uwaga: w oryginale: left(cols x cols) * shuffled(R,:,:) * right(8x8)
-        % shuffled(R,:,:) to wektor 1 x cols x 8.
-        % Wymiary w permutacji: (1, cols, 8).
-        % left działa na wymiar 2 (cols), right działa na wymiar 3 (8).
+        % Here left is column perm, right is bit perm
+        % Note: original was left(cols x cols) * shuffled(R,:,:) * right(8x8)
+        % shuffled(R,:,:) is vector 1 x cols x 8.
+        % Perm dimensions: (1, cols, 8).
+        % left acts on dim 2 (cols), right acts on dim 3 (8).
         
-        % Pobieramy wycinek
+        % Get slice
         slice = shuffled(R, :, :); 
-        % Permutujemy
+        % Permute
         slice = slice(1, p_cols, p_bits);
-        % Zapisujemy
+        % Save
         shuffled(R, :, :) = slice;
     end
     
@@ -106,7 +106,7 @@ function [Encryptedim, keys] = encrypt_image_opt(input_image)
         [p_rows, curr_y] = generate_permutation(curr_y, mu2, a2, rows);
         [p_bits, curr_y] = generate_permutation(curr_y, mu2, a2, 8);
         
-        % shuffled(:,C,:) to rows x 1 x 8
+        % shuffled(:,C,:) is rows x 1 x 8
         slice = shuffled(:, C, :);
         slice = slice(p_rows, 1, p_bits);
         shuffled(:, C, :) = slice;
@@ -122,56 +122,56 @@ function [Encryptedim, keys] = encrypt_image_opt(input_image)
         [p_rows, curr_z] = generate_permutation(curr_z, mu3, a3, rows);
         [p_cols, curr_z] = generate_permutation(curr_z, mu3, a3, cols);
         
-        % shuffled(:,:,P) to rows x cols
+        % shuffled(:,:,P) is rows x cols
         slice = shuffled(:, :, P);
         slice = slice(p_rows, p_cols);
         shuffled(:, :, P) = slice;
     end
     
     % --- Diffusion (XOR) ---
-    % Linearyzacja
+    % Linearization
     shuffledstream = reshape(shuffled, 1, []);
     num_elements = rows*cols*8;
     
-    % Generacja strumienia dyfuzyjnego (prealokacja)
+    % Diffusion stream generation (preallocation)
     v_seq = zeros(1, num_elements);
-    stream = false(1, num_elements); % Logicals są mniejsze
+    stream = false(1, num_elements); % Logicals are smaller
     
     curr_v = v_val;
-    % Pierwszy element specyficzny (stream(1)=1 w oryginale)
+    % First element specific (stream(1)=1 in original)
     stream(1) = 1; 
     
-    % To jest pętla zależna (v(i) zależy od v(i-1)), trudno zwektoryzować w pełni
-    % Ale można przyspieszyć obliczenia unikając zmian rozmiaru tablicy
+    % This is a dependent loop (v(i) depends on v(i-1)), hard to vectorise fully
+    % But we can speed up calc by avoiding array resizing
     
-    % Wartość startowa dla pętli
+    % Start value for loop
     prev_v = curr_v;
     
-    % Optymalizacja pętli dyfuzyjnej
-    % Wyciągamy stałe przed pętlę
+    % Optimization of diffusion loop
+    % Extract constants before loop
     mu4_v = mu4; a4_v = a4;
     
-    % Ponieważ v(i) zależy od v(i-1), musimy iterować.
-    % Możemy jednak użyć tablicy v_seq.
-    v_seq(1) = 0; % placeholder, nieużywany w pętli od i=2
+    % Since v(i) depends on v(i-1), we must iterate.
+    % We can use v_seq array.
+    v_seq(1) = 0; % placeholder, unused in loop from i=2
     
-    % Niestety chaos jest iteracyjny.
+    % Chaos is iterative.
     % v(i) = cos... v(i-1)
-    % v(1) to wejściowe keys(10). Ale w pętli i idzie od 2 do end.
-    % v(1) w pętli odpowiada v(i-1) dla i=2.
+    % v(1) is input keys(10). But in loop i goes 2:end.
+    % v(1) in loop corresponds to v(i-1) for i=2.
     
     temp_v = prev_v;
-    % Używamy tablicy 'stream' prealokowanej
-    % W pętli MATLAB JIT (Just-In-Time) sobie poradzi jeśli tablice są prealokowane.
+    % Using preallocated 'stream' array
+    % MATLAB JIT (Just-In-Time) handles preallocated loops well.
     
     for i = 2:num_elements
-        % Oblicz v(i) na podstawie v(i-1) (czyli temp_v)
+        % Calculate v(i) based on v(i-1) (temp_v)
         next_v = cos(mu4_v * (temp_v^3 + temp_v) + a4_v);
         
-        % Oblicz stream bit
-        % Oryginał: floor(mod(10^12 * abs(next_v + temp_v), 2))
+        % Calculate stream bit
+        % Original: floor(mod(10^12 * abs(next_v + temp_v), 2))
         val = 10^12 * abs(next_v + temp_v);
-        % Szybsze modulo 2 dla liczb dodatnich:
+        % Faster modulo 2 for positive numbers:
         val = val - 2*floor(val/2); 
         stream(i) = floor(val);
         
@@ -182,7 +182,7 @@ function [Encryptedim, keys] = encrypt_image_opt(input_image)
     encryptedstream = xor(shuffledstream, stream);
     
     % --- Reconstruction ---
-    % ZWEKTORYZOWANE składanie bitów
+    % VECTORIZED bit composition
     Encryptedim = rebuild_image_from_bits(encryptedstream, rows, cols);
 end
 
@@ -193,7 +193,7 @@ function Reconstructedim = decrypt_image_opt(Encryptedim, keys)
     Encryptedim = double(Encryptedim);
     [rows, cols] = size(Encryptedim);
     
-    % Bit decomposition - ZWEKTORYZOWANE
+    % Bit decomposition - VECTORIZED
     Encryptedimbits = zeros(rows, cols, 8);
     for b = 1:8
         Encryptedimbits(:,:,b) = bitget(Encryptedim, b);
@@ -207,7 +207,7 @@ function Reconstructedim = decrypt_image_opt(Encryptedim, keys)
     v_val = keys(10); mu4 = keys(11); a4 = keys(12);
     
     % --- Reverse Diffusion (XOR) ---
-    % Generacja strumienia identyczna jak przy szyfrowaniu
+    % Stream generation identical to encryption
     num_elements = rows*cols*8;
     stream = false(1, num_elements);
     stream(1) = 1;
@@ -233,14 +233,14 @@ function Reconstructedim = decrypt_image_opt(Encryptedim, keys)
         [p_rows, curr_z] = generate_permutation(curr_z, mu3, a3, rows);
         [p_cols, curr_z] = generate_permutation(curr_z, mu3, a3, cols);
         
-        % Odwracanie permutacji: Dshuffledim(p_rows, p_cols) = Current
-        % Czyli Current(inv_p_rows, inv_p_cols)
-        % W MATLAB:
-        % Jeśli B = A(p), to A(p) = B przywraca stan (assignment by indexing)
+        % Reversing permutation: Dshuffledim(p_rows, p_cols) = Current
+        % Meaning Current(inv_p_rows, inv_p_cols)
+        % In MATLAB:
+        % If B = A(p), then A(p) = B restores state (assignment by indexing)
         
         slice = Dshuffledim(:, :, P);
-        % Tutaj robimy odwrotnie: wstawiamy wartości w odpowiednie miejsca
-        % Metoda "Assignment": Temp(p_rows, p_cols) = slice
+        % Here we do reverse: insert values into correct places
+        % Assignment method: Temp(p_rows, p_cols) = slice
         
         temp_slice = zeros(rows, cols);
         temp_slice(p_rows, p_cols) = slice;
@@ -283,32 +283,32 @@ function Reconstructedim = decrypt_image_opt(Encryptedim, keys)
 end
 
 % =========================================================
-% FUNKCJE POMOCNICZE
+% HELPER FUNCTIONS
 % =========================================================
 
 function [perm, last_val] = generate_permutation(start_val, mu, a, n)
-    % Generuje permutację liczb 1:n przy użyciu mapy chaotycznej.
-    % Zoptymalizowana wersja z tablicą logiczną dla O(1) lookups.
+    % Generates permutation of numbers 1:n using chaotic map.
+    % Optimized version with logical array for O(1) lookups.
     
     perm = zeros(1, n);
-    used = false(1, n); % Tablica logiczna "czy wykorzystano?"
+    used = false(1, n); % Logical array "is used?"
     
     curr = start_val;
     
-    % Pierwszy element
+    % First element
     pos = floor(n * abs(curr)) + 1;
     perm(1) = pos;
     used(pos) = true;
     
     count = 1;
     
-    % Pętla while aż znajdziemy n unikalnych
+    % While loop until n unique found
     while count < n
         % Chaos map iteration
         curr = cos(mu * (curr^3 + curr) + a);
         pos = floor(n * abs(curr)) + 1;
         
-        % Szybkie sprawdzenie
+        % Fast check
         if ~used(pos)
             count = count + 1;
             perm(count) = pos;
@@ -319,20 +319,20 @@ function [perm, last_val] = generate_permutation(start_val, mu, a, n)
 end
 
 function img = rebuild_image_from_bits(stream, rows, cols)
-    % Szybka konwersja bitów do liczb (vectorized bi2de)
-    % stream to wektor 1 x (rows*cols*8)
+    % Fast bit conversion (vectorized bi2de)
+    % stream is vector 1 x (rows*cols*8)
     
-    % Reshape do macierzy: (rows*cols) x 8
-    % Uwaga: bitget(A, 1) to najmniej znaczący bit (LSB).
-    % Oryginalny kod robił reshape test(i,j,:) -> 1x1x8.
-    % Zakładamy kolejność bitów 1..8 (LSB..MSB).
+    % Reshape to matrix: (rows*cols) x 8
+    % Note: bitget(A, 1) is LSB.
+    % Original code did reshape test(i,j,:) -> 1x1x8.
+    % Assuming bit order 1..8 (LSB..MSB).
     
     bits_matrix = reshape(stream, rows, cols, 8);
     
-    % Wagi bitów: 1, 2, 4, 8, 16, 32, 64, 128
+    % Bit weights: 1, 2, 4, 8, 16, 32, 64, 128
     weights = 2 .^ (0:7); % [1 2 4 8 16 32 64 128]
     weights = reshape(weights, 1, 1, 8);
     
-    % Suma ważona wzdłuż 3 wymiaru
+    % Weighted sum along 3rd dimension
     img = sum(bits_matrix .* weights, 3);
 end

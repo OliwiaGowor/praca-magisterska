@@ -64,7 +64,7 @@ classdef DES_ImgProcess_Opt
         function val = hexToUint64(hexStr)
             % Convert hex string to uint64
             % hex2dec in MATLAB loses precision for > 52 bits (double).
-            % We must use sscanf or split into parts.
+            % Use sscanf or split into parts.
             if length(hexStr) > 16, hexStr = hexStr(1:16); end
             
             % Split into two 32-bit parts to avoid double precision issues

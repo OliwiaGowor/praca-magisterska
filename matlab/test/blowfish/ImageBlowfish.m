@@ -53,11 +53,11 @@ classdef ImageBlowfish < handle
             % 1. Decrypt
             flatBytes = obj.cryptoEngine.decryptCBC(ciphertext, iv);
             
-            % 2. Reshape to Original Dimensions (Works for RGB too)
+            % 2. Reshape to Original Dimensions
             try
                 img = reshape(flatBytes, originalSize);
             catch
-                warning('Decrypted data size (%d) does not match original dimensions.', length(flatBytes));
+                warning('Rozmiar odszyfrowanych danych (%d) nie pasuje do oryginalnych wymiarów.', length(flatBytes));
                 img = flatBytes;
                 return;
             end

@@ -1,9 +1,6 @@
 classdef Blowfish < handle
     % BLOWFISH - High-Performance Matlab Implementation
-    % Fixes:
-    %   1. Loads constants from 'BlowfishConstants.mat'
-    %   2. Fixes concatenation dimension error in decryptCBC
-    
+
     properties (Access = private)
         P % 18 x 1 uint32
         S % 4 x 256 uint32
@@ -23,7 +20,7 @@ classdef Blowfish < handle
                 obj.S = data.S_init;
             else
                 % Fallback/Error if file missing
-                error('BlowfishConstants.mat missing. Please run generate_constants.m first.');
+                error('Brak pliku BlowfishConstants.mat. Proszę najpierw uruchomić generate_constants.m.');
             end
             
             % 3. Key Expansion
@@ -32,7 +29,7 @@ classdef Blowfish < handle
         end
         
         function ciphertext = encryptCBC(obj, plaintext, iv)
-            if length(iv) ~= 8, error('IV must be 8 bytes'); end
+            if length(iv) ~= 8, error('IV musi mieć 8 bajtów'); end
             
             % Force input to row vector for padding
             padded = obj.pkcs7pad(plaintext(:)');
@@ -78,7 +75,6 @@ classdef Blowfish < handle
             
             % --- FORCE COLUMN VECTOR ---
             blocks = blocks(:); 
-            % -----------------------------------------
             
             % Reshape to 2 rows (L top, R bottom)
             blocksMat = reshape(blocks, 2, []);
@@ -90,7 +86,7 @@ classdef Blowfish < handle
             ivWords = typecast(uint8(iv), 'uint32');
             if obj.isLittleEndianSystem, ivWords = swapbytes(ivWords); end
             
-            % Now this concatenation works because both are columns
+            % Concatenation - both are columns
             prev = [ivWords(:); blocks(1:end-2)];
             prevMat = reshape(prev, 2, []);
             
@@ -162,7 +158,7 @@ classdef Blowfish < handle
 
         function expandKey(obj, key)
             len = length(key);
-            if len == 0 || len > 56, error('Key len 1-56'); end
+            if len == 0 || len > 56, error('Długość klucza 1-56'); end
             kIdx = 1;
             for i = 1:18
                 val = uint32(0);
@@ -177,7 +173,7 @@ classdef Blowfish < handle
             for i = 1:4, for j = 1:2:256, [L, R] = obj.encryptBlock(L, R); obj.S(i,j)=L; obj.S(i,j+1)=R; end, end
         end
         
-        function p = pkcs7pad(~, d), pl=8-mod(length(d),8); if pl==0, pl=8; end; p=[uint8(d(:)'), repmat(uint8(pl),1,pl)]; end
-        function d = pkcs7unpad(~, p), pl=double(p(end)); if pl>8||pl==0, error('Bad Pad'); end; d=p(1:end-pl); end
+        function p = pkcs7pad(~, d), pl=8-mod(length(d),8); if pl==0, pl=8; end; p=[uint8(d(:)), repmat(uint8(pl),1,pl)]; end
+        function d = pkcs7unpad(~, p), pl=double(p(end)); if pl>8||pl==0, error('Błędny Padding'); end; d=p(1:end-pl); end
     end
 end

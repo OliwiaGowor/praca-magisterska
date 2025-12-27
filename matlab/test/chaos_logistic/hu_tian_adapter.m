@@ -1,6 +1,6 @@
 function [out1, out2] = hu_tian_adapter(mode, varargin)
-    % HU_TIAN_ADAPTER - Implementacja algorytmu Hu & Tian (2020)
-    % Integruje: logistic_substitution, two_stage_logistic, m_sequence_permute
+    % HU_TIAN_ADAPTER - Implementation of Hu & Tian Algorithm (2020)
+    % Integrates: logistic_substitution, two_stage_logistic, m_sequence_permute
     
     if strcmp(mode, 'encrypt')
         [out1, out2] = encrypt_core(varargin{1}); % out1=Img, out2=Keys
@@ -16,7 +16,7 @@ end
 % CORE: ENCRYPTION
 % =========================================================
 function [C, keys] = encrypt_core(P)
-    % Parametry zdefiniowane w dostarczonym main.m
+    % Parameters as defined in the provided main configuration
     keys.x1 = 0.41;
     keys.x2 = 0.87;
     keys.lambda1 = 3.95;
@@ -32,12 +32,12 @@ function [C, keys] = encrypt_core(P)
     
     C = P;
     
-    % Główna pętla szyfrowania
+    % Main Encryption Loop
     for k = 1:keys.iterations
-        % Krok A: Podstawienie (Substitution)
+        % Step A: Substitution
         C = logistic_substitution(C, keys, 'encrypt');
         
-        % Krok B: Permutacja (M-Sequence/Scrambling)
+        % Step B: Permutation (M-Sequence/Scrambling)
         C = m_sequence_permute(C, keys.m_seed, 'encrypt');
     end
     
@@ -51,12 +51,12 @@ function P_recovered = decrypt_core(C, keys)
     C = double(C);
     P_recovered = C;
     
-    % Odwrócona pętla deszyfrowania
+    % Reverse Decryption Loop
     for k = 1:keys.iterations
-        % Odwrócony Krok B: Permutacja
+        % Reverse Step B: Permutation
         P_recovered = m_sequence_permute(P_recovered, keys.m_seed, 'decrypt');
         
-        % Odwrócony Krok A: Podstawienie
+        % Reverse Step A: Substitution
         P_recovered = logistic_substitution(P_recovered, keys, 'decrypt');
     end
     
@@ -64,11 +64,11 @@ function P_recovered = decrypt_core(C, keys)
 end
 
 % =========================================================
-% FUNKCJE POMOCNICZE (Merged from separate files)
+% HELPER FUNCTIONS
 % =========================================================
 
 function seq = two_stage_logistic(x0, gamma, len)
-    %
+    % Generates chaotic sequence using Two-Stage Logistic Map
     seq = zeros(len, 1);
     x = x0;
     for k = 1:len
@@ -82,11 +82,11 @@ function seq = two_stage_logistic(x0, gamma, len)
 end
 
 function img_out = logistic_substitution(img_in, keys, mode)
-    % Zintegrowana funkcja podstawienia
+    % Integrated substitution function
     [M, N] = size(img_in);
     L = 256;
     
-    % Generowanie macierzy chaotycznych
+    % Generate chaotic matrices
     seq1 = two_stage_logistic(keys.x1, keys.lambda1, M*N);
     seq2 = two_stage_logistic(keys.x2, keys.lambda2, M*N);
     
@@ -115,15 +115,15 @@ function img_out = logistic_substitution(img_in, keys, mode)
 end
 
 function img_out = m_sequence_permute(img_in, seed_val, mode)
-    %
+    % Position scrambling based on M-Sequence (simulated via randperm)
     [M, N] = size(img_in);
     num_pixels = M * N;
     
-    % Deterministyczna permutacja na podstawie seeda
-    s = rng; % Zapisz obecny stan generatora
+    % Deterministic permutation based on seed
+    s = rng; % Save current generator state
     rng(seed_val); 
     perm_order = randperm(num_pixels);
-    rng(s); % Przywróć stan (żeby nie psuć losowości w innych częściach programu)
+    rng(s); % Restore state (to preserve randomness elsewhere)
     
     img_linear = img_in(:);
     img_out_linear = zeros(num_pixels, 1);

@@ -17,7 +17,7 @@ function output = aes_mode(data, key, iv, mode, algorithm)
     key = uint8(key);
     iv  = uint8(iv);
 
-    % Load Schedule & Tables ONCE
+    % Load Schedule & Tables once
     [w, Nr, s_box, inv_s_box, m9, m11, m13, m14] = aes_init(key); 
 
     % --- Processing ---
@@ -35,7 +35,7 @@ function output = aes_mode(data, key, iv, mode, algorithm)
         output = ctr_process_loop(data, w, Nr, s_box, iv);
         
     else
-        error('Unknown algorithm. Use "cbc" or "ctr".');
+        error('Nieznany algorytm. Użyj "cbc" lub "ctr".');
     end
 end
 
@@ -66,10 +66,10 @@ end
 
 function plaintext = cbc_decrypt_vectorized(ciphertext, w, Nr, inv_s_box, iv, m9, m11, m13, m14)
     if mod(length(ciphertext), 16) ~= 0
-        error('Ciphertext length must be a multiple of 16 for CBC decryption.');
+        error('Długość szyfrogramu musi być wielokrotnością 16 dla deszyfrowania CBC.');
     end
 
-    % 1. Batch Decrypt (The heavy lifting)
+    % 1. Batch Decrypt
     % Decrypts all blocks simultaneously using the vectorized core
     decrypted_stream = aes_inv_cipher_vectorized(ciphertext, w, Nr, inv_s_box, m9, m11, m13, m14);
     
@@ -82,13 +82,13 @@ function plaintext = cbc_decrypt_vectorized(ciphertext, w, Nr, inv_s_box, iv, m9
     pad_len = double(padded_plaintext(end));
     
     if pad_len > 16 || pad_len == 0
-        warning('Invalid padding length. Output likely corrupt.');
+        warning('Nieprawidłowa długość paddingu. Wynik prawdopodobnie uszkodzony.');
         plaintext = padded_plaintext; return;
     end
     
     padding_bytes = padded_plaintext(end-pad_len+1 : end);
     if any(padding_bytes ~= pad_len)
-        warning('Invalid padding bytes. Output likely corrupt.');
+        warning('Nieprawidłowe bajty paddingu. Wynik prawdopodobnie uszkodzony.');
         plaintext = padded_plaintext; return;
     end
     

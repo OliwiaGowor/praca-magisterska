@@ -96,7 +96,7 @@ function out = aes_xtime(in)
     t = bitshift(in, 1);
     
     % If MSB was 1, XOR with 0x1B (27)
-    % We check the input 'in' for >= 128 (0x80)
+    % Check the input 'in' for >= 128 (0x80)
     idx = in >= 128;
     t(idx) = bitxor(t(idx), 27);
     

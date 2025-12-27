@@ -15,8 +15,8 @@ P = double(P); % Work in double for calculations
 [M, N] = size(P);
 
 disp('--------------------------------------------------');
-disp('Encryption Scheme Started');
-disp(['Image Size: ', num2str(M), 'x', num2str(N)]);
+disp('Rozpoczęto schemat szyfrowania');
+disp(['Rozmiar obrazu: ', num2str(M), 'x', num2str(N)]);
 
 % System Parameters (from Section 2.7 / 4.1) [cite: 357, 483]
 params.a = 20;
@@ -27,41 +27,41 @@ params.k = 123.456;      % Intermediate key (double)
 params.Pre = uint8(50);  % Intermediate key (8-bit integer)
 
 %% 2. Encryption Process (Algorithm 3)
-disp('Encrypting...');
+disp('Szyfrowanie...');
 tic;
 [C, KeySeq_X, KeySeq_Y] = EncryptImage(P, params);
 encryptionTime = toc;
-disp(['Encryption finished in ', num2str(encryptionTime), ' seconds.']);
+disp(['Szyfrowanie zakończone w ', num2str(encryptionTime), ' s.']);
 
 %% 3. Decryption Process (Algorithm 4)
-disp('Decrypting...');
+disp('Deszyfrowanie...');
 tic;
 P_recovered = DecryptImage(C, KeySeq_X, KeySeq_Y, params);
 decryptionTime = toc;
-disp(['Decryption finished in ', num2str(decryptionTime), ' seconds.']);
+disp(['Deszyfrowanie zakończone w ', num2str(decryptionTime), ' s.']);
 
 %% 4. Verification and Visualization
 % Check if perfectly reconstructed
 diff = sum(sum(abs(P - P_recovered)));
 if diff == 0
-    disp('SUCCESS: Decrypted image matches original perfectly.');
+    disp('SUKCES: Obraz odszyfrowany jest identyczny z oryginałem.');
 else
-    disp(['WARNING: Difference detected (Error Sum: ', num2str(diff), ')']);
+    disp(['OSTRZEŻENIE: Wykryto różnicę (Suma błędów: ', num2str(diff), ')']);
 end
 
 % Display Results
-figure('Name', 'Encryption/Decryption Results', 'NumberTitle', 'off');
+figure('Name', 'Wyniki Szyfrowania', 'NumberTitle', 'off');
 subplot(1, 3, 1);
 imshow(uint8(P));
-title('Original Plaintext');
+title('Oryginał');
 
 subplot(1, 3, 2);
 imshow(uint8(C));
-title('Encrypted Ciphertext');
+title('Szyfrogram');
 
 subplot(1, 3, 3);
 imshow(uint8(P_recovered));
-title('Decrypted Image');
+title('Odszyfrowany');
 
 
 %% ---------------------------------------------------------
@@ -74,7 +74,7 @@ function [x_next, y_next] = HyperchaoticMap(x, y, a, b)
     x_next = sin(a * pi * x + b * y)^2;
     
     % y_n+1 = cos^2(b*pi/y_n + a*x_n)
-    % Handle potential division by zero for stability (though rare in floats)
+    % Handle potential division by zero for stability
     if y == 0
         term = 0; 
     else

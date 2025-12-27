@@ -15,7 +15,7 @@ function ciphertext = aes_cipher_core(plaintext, w, Nr, s_box)
         % 1. SubBytes (Matrix indexing)
         state = s_box(double(state) + 1);
         
-        % 2. ShiftRows (Manual vectorized shifts are faster than loops)
+        % 2. ShiftRows 
         % Row 1 (Index 2) shift left 1
         state(2, [1 2 3 4]) = state(2, [2 3 4 1]);
         % Row 2 (Index 3) shift left 2
@@ -23,7 +23,7 @@ function ciphertext = aes_cipher_core(plaintext, w, Nr, s_box)
         % Row 3 (Index 4) shift left 3
         state(4, [1 2 3 4]) = state(4, [4 1 2 3]);
         
-        % 3. MixColumns (Vectorized - No loops)
+        % 3. MixColumns 
         % T = state * 2
         t = bitshift(state, 1);
         % If MSB was 1, XOR with 0x1B
