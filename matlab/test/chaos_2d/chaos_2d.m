@@ -1,194 +1,136 @@
-%% FullImageEncryption.m
-% Implements the Secure Image Encryption Scheme based on Hyperchaotic System
-% and 2D Compressed Sensing (Algorithms 3 & 4)
-% Source: Entropy 2024, 26, 603
-
+%% chaos_2d.m
 clc; clear; close all;
 
-%% 1. Setup and Initialization
-% Load a sample image (grayscale)
-P = imread('cameraman.tif'); 
-if size(P, 3) == 3
-    P = rgb2gray(P);
-end
-P = double(P); % Work in double for calculations
-[M, N] = size(P);
+%% 1. Load image
+P = imread('cameraman.tif');
+if size(P,3)==3, P = rgb2gray(P); end
+P = uint8(P);
+[M,N] = size(P);
 
-disp('--------------------------------------------------');
-disp('Rozpoczęto schemat szyfrowania');
-disp(['Rozmiar obrazu: ', num2str(M), 'x', num2str(N)]);
-
-% System Parameters (from Section 2.7 / 4.1) [cite: 357, 483]
-params.a = 20;
-params.b = 30;
+%% 2. Parameters (Entropy 2024)
+params.a  = 20;
+params.b  = 30;
 params.x0 = 0.123987;
 params.y0 = 0.987321;
-params.k = 123.456;      % Intermediate key (double)
-params.Pre = uint8(50);  % Intermediate key (8-bit integer)
+params.Pre = uint8(50);
 
-%% 2. Encryption Process (Algorithm 3)
-disp('Szyfrowanie...');
-tic;
-[C, KeySeq_X, KeySeq_Y] = EncryptImage(P, params);
-encryptionTime = toc;
-disp(['Szyfrowanie zakończone w ', num2str(encryptionTime), ' s.']);
+%% 3. Encrypt
+[C, keys] = EncryptImage_Entropy(P, params);
 
-%% 3. Decryption Process (Algorithm 4)
-disp('Deszyfrowanie...');
-tic;
-P_recovered = DecryptImage(C, KeySeq_X, KeySeq_Y, params);
-decryptionTime = toc;
-disp(['Deszyfrowanie zakończone w ', num2str(decryptionTime), ' s.']);
+%% 4. Decrypt
+P_rec = DecryptImage_Entropy(C, keys, params);
 
-%% 4. Verification and Visualization
-% Check if perfectly reconstructed
-diff = sum(sum(abs(P - P_recovered)));
-if diff == 0
-    disp('SUKCES: Obraz odszyfrowany jest identyczny z oryginałem.');
-else
-    disp(['OSTRZEŻENIE: Wykryto różnicę (Suma błędów: ', num2str(diff), ')']);
-end
+%% 5. Verify
+disp(['Reconstruction error = ', ...
+    num2str(sum(abs(double(P(:))-double(P_rec(:)))))]);
 
-% Display Results
-figure('Name', 'Wyniki Szyfrowania', 'NumberTitle', 'off');
-subplot(1, 3, 1);
-imshow(uint8(P));
-title('Oryginał');
+figure;
+subplot(1,3,1); imshow(P);      title('Plain');
+subplot(1,3,2); imshow(C);      title('Cipher');
+subplot(1,3,3); imshow(P_rec);  title('Recovered');
 
-subplot(1, 3, 2);
-imshow(uint8(C));
-title('Szyfrogram');
-
-subplot(1, 3, 3);
-imshow(uint8(P_recovered));
-title('Odszyfrowany');
-
-
-%% ---------------------------------------------------------
-%  FUNCTION DEFINITIONS
-%  ---------------------------------------------------------
-
-% --- 2D Hyperchaotic Map (Eq. 1)  ---
-function [x_next, y_next] = HyperchaoticMap(x, y, a, b)
-    % x_n+1 = sin^2(a*pi*x_n + b*y_n)
-    x_next = sin(a * pi * x + b * y)^2;
-    
-    % y_n+1 = cos^2(b*pi/y_n + a*x_n)
-    % Handle potential division by zero for stability
-    if y == 0
-        term = 0; 
+%% =========================================================
+%  Hyperchaotic map (Eq. 1)
+% =========================================================
+function [x,y] = HyperchaoticMap(x,y,a,b)
+    x = sin(a*pi*x + b*y)^2;
+    if y==0
+        y = 0;
     else
-        term = b * pi / y;
-    end
-    y_next = cos(term + a * x)^2;
-end
-
-% --- Algorithm 3: Encryption  ---
-function [C, KeySeq_X, KeySeq_Y] = EncryptImage(P, params)
-    [M, N] = size(P);
-    
-    % Initialize outputs
-    C = zeros(M, N);
-    KeySeq_X = zeros(1, M*N); % Store valid x keys
-    KeySeq_Y = zeros(1, M*N); % Store valid y keys
-    
-    % Initialize State
-    x = params.x0;
-    y = params.y0;
-    Pre = params.Pre; % 8-bit unsigned integer
-    k = params.k;     % Double precision
-    a = params.a;
-    b = params.b;
-    
-    % Flag matrix to track filled positions [cite: 492]
-    flag = zeros(M, N);
-    
-    count = 0;
-    
-    % Loop 1:M, 1:N [cite: 495-496]
-    for i = 1:M
-        for j = 1:N
-            count = count + 1;
-            
-            % --- Find a unique empty position ---
-            % "while flag(i_next, j_next) == 1 do Repeat" [cite: 503-505]
-            valid_position = false;
-            
-            while ~valid_position
-                [x, y] = HyperchaoticMap(x, y, a, b); % Iterative update [cite: 500]
-                
-                % Calculate coordinates (1-based index for MATLAB)
-                i_next = mod(floor(x * 10^6), M) + 1; % [cite: 501]
-                j_next = mod(floor(y * 10^6), N) + 1; % [cite: 502]
-                
-                if flag(i_next, j_next) == 0
-                    valid_position = true;
-                end
-            end
-            
-            % --- Encryption Equation [cite: 520] ---
-            % C(next) = bitxor(mod(P(i,j) + k, 256), Pre)
-            % Note: P is double, Pre is uint8. 
-            % We must be careful with types for bitxor.
-            
-            val_shifted = mod(P(i, j) + k, 256);
-            
-            % Perform XOR (Convert to uint8 for bitwise op)
-            c_val = bitxor(uint8(val_shifted), Pre);
-            
-            % Assign to Ciphertext matrix
-            C(i_next, j_next) = double(c_val);
-            
-            % --- Update State [cite: 521-522] ---
-            Pre = c_val;           % Update Pre for next pixel diffusion
-            flag(i_next, j_next) = 1; % Mark position as filled
-            
-            % --- Record Keys [cite: 523] ---
-            KeySeq_X(count) = x;
-            KeySeq_Y(count) = y;
-        end
+        y = cos(b*pi/y + a*x)^2;
     end
 end
 
-% --- Algorithm 4: Decryption  ---
-function P_recovered = DecryptImage(C, KeySeq_X, KeySeq_Y, params)
-    [M, N] = size(C);
-    P_recovered = zeros(M, N);
-    
-    % Initialize State
-    Pre = params.Pre; % Must match initial encryption Pre [cite: 530]
-    k = params.k;
-    
-    num = 1; % Key sequence counter [cite: 533]
-    
-    % Loop 1:M, 1:N [cite: 534-535]
-    for i = 1:M
-        for j = 1:N
-            % --- Retrieve Coordinates from Keys [cite: 538-539] ---
-            % We use the EXACT keys recorded during encryption to hit the
-            % same coordinates in the same order.
-            x = KeySeq_X(num);
-            y = KeySeq_Y(num);
-            
-            i_next = mod(floor(x * 10^6), M) + 1;
-            j_next = mod(floor(y * 10^6), N) + 1;
-            
-            % --- Decryption Equation [cite: 540] ---
-            % P(i,j) = mod(bitxor(C(next), Pre) - k, 256)
-            
-            c_val = uint8(C(i_next, j_next)); % Retrieve ciphertext pixel
-            
-            % XOR with previous ciphertext (Pre) to reverse diffusion
-            xor_result = double(bitxor(c_val, Pre));
-            
-            % Subtract k and handle modulo 256
-            p_val = mod(xor_result - k, 256);
-            
-            P_recovered(i, j) = p_val;
-            
-            % --- Update State [cite: 550] ---
-            Pre = c_val; % Update Pre using the CURRENT ciphertext pixel
-            num = num + 1; % [cite: 551]
-        end
-    end
+%% =========================================================
+%  Algorithm 3 — Encryption (Permutation + Double Diffusion)
+% =========================================================
+function [C, key] = EncryptImage_Entropy(P, params)
+
+[M,N] = size(P);
+L = M*N;
+
+% --- generate hyperchaotic sequences
+x = params.x0; y = params.y0;
+X = zeros(1,L); Y = zeros(1,L);
+for i = 1:L
+    [x,y] = HyperchaoticMap(x,y,params.a,params.b);
+    X(i) = x; 
+    Y(i) = y;
+end
+
+% --- permutation indexes (position scrambling)
+perm = mod(floor(X*1e14),L) + 1;
+[~,perm] = unique(perm,'stable');
+inv_perm(perm) = 1:L;
+
+% --- keystream for value diffusion
+K = uint8(mod(floor(Y*1e14),256));
+
+% --- apply permutation
+CR = 0.5; % compression ratio 
+[Y, cskey] = CS_Forward(P, X, Y, CR);
+
+Pcs = uint8(mod(round(Y),256));
+Pvec = Pcs(:);
+Pp = Pvec(perm);
+
+
+% ---------- Forward diffusion (Eq. 14) ----------
+C1  = zeros(L,1,'uint8');
+Pre = params.Pre;
+for i = 1:L
+    C1(i) = bitxor(uint8(mod(double(Pp(i))+double(Pre),256)), K(i));
+    Pre   = C1(i);
+end
+
+% ---------- Backward diffusion (Eq. 15) ----------
+C2  = zeros(L,1,'uint8');
+Pre = params.Pre;
+for i = L:-1:1
+    C2(i) = bitxor(uint8(mod(double(C1(i))+double(Pre),256)), K(i));
+    Pre   = C2(i);
+end
+
+C = reshape(C2,M,N);
+
+key.cskey = cskey;
+key.CR = CR;
+key.perm     = perm;
+key.inv_perm = inv_perm;
+key.K        = K;
+end
+
+%% =========================================================
+%  Algorithm 4 — Decryption
+% =========================================================
+function P = DecryptImage_Entropy(C, key, params)
+
+[M,N] = size(C);
+L = M*N;
+
+Cvec = C(:);
+K    = key.K;
+perm = key.perm;
+invp = key.inv_perm;
+
+% ---------- inverse backward diffusion ----------
+C1  = zeros(L,1,'uint8');
+Pre = params.Pre;
+for i = L:-1:1
+    C1(i) = uint8(mod(double(bitxor(Cvec(i),K(i))) - double(Pre),256));
+    Pre   = Cvec(i);
+end
+
+% ---------- inverse forward diffusion ----------
+Pp  = zeros(L,1,'uint8');
+Pre = params.Pre;
+for i = 1:L
+    Pp(i) = uint8(mod(double(bitxor(C1(i),K(i))) - double(Pre),256));
+    Pre   = C1(i);
+end
+
+% ---------- inverse permutation ----------
+Yrec = reshape(Pp(invp), size(key.cskey.Phi_r,1), []);
+P = CS_Inverse(double(Yrec), key.cskey);
+
 end

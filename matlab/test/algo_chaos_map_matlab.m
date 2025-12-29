@@ -103,6 +103,31 @@ end
 function out_img = logistic_diffusion_decrypt(img, seqs, sz)
     % Reverses the diffusion process
     [r, c, ch] = size(img);
+    num_pixels = r*c;
     
     % Reverse multiplication sequence (1/x)
-    xi = 1./seqs.x; yi = 1./seq
+    xi = 1./seqs.x; yi = 1./seqs.y; zi = 1./seqs.z;
+    
+    if ch >= 3
+        DR = reshape(img(:,:,1), 1, []);
+        DG = reshape(img(:,:,2), 1, []);
+        DB = reshape(img(:,:,3), 1, []);
+        
+        % XOR (Odwrotność XOR to XOR)
+        DDR = bitxor(seqs.Sx, uint8(DR));
+        DDG = bitxor(seqs.Sy, uint8(DG));
+        DDB = bitxor(seqs.Sz, uint8(DB));
+        
+        % Odwrócenie mnożenia
+        DDDR = xi .* double(DDR);
+        DDDG = yi .* double(DDG);
+        DDDB = zi .* double(DDB);
+        
+        out_img = uint8(cat(3, reshape(DDDR,r,c), reshape(DDDG,r,c), reshape(DDDB,r,c)));
+    else
+        DR = reshape(img(:,:,1), 1, []);
+        DDR = bitxor(seqs.Sx, uint8(DR));
+        DDDR = xi .* double(DDR);
+        out_img = uint8(reshape(DDDR, r, c));
+    end
+end

@@ -173,7 +173,7 @@ classdef Blowfish < handle
             for i = 1:4, for j = 1:2:256, [L, R] = obj.encryptBlock(L, R); obj.S(i,j)=L; obj.S(i,j+1)=R; end, end
         end
         
-        function p = pkcs7pad(~, d), pl=8-mod(length(d),8); if pl==0, pl=8; end; p=[uint8(d(:)), repmat(uint8(pl),1,pl)]; end
+        function p = pkcs7pad(~, d), pl=8-mod(length(d),8); if pl==0, pl=8; end; p=[uint8(d(:)'), repmat(uint8(pl),1,pl)]; end
         function d = pkcs7unpad(~, p), pl=double(p(end)); if pl>8||pl==0, error('Błędny Padding'); end; d=p(1:end-pl); end
     end
 end
