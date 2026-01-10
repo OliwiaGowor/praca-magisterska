@@ -1,27 +1,21 @@
-function data = setup_test_data(custom_img)
-    % SETUP_TEST_DATA - Przygotowuje obrazy do testów
+function data = setup_test_data()
+    % Loads image, creates modified version, and calculates original statistics
     
-    if nargin < 1 || isempty(custom_img)
-        try
-            img_orig = imread('cameraman.tif');
-        catch
-            img_orig = uint8(randi([0 255], 256, 256));
-        end
-    else
-        img_orig = custom_img;
-    end
-
-    if size(img_orig, 3) == 3
-        img_orig = rgb2gray(img_orig);
+    try
+        img_orig = imread('cameraman.tif');
+        % img_orig = imresize(img_orig, [64 64]); % Optional resizing
+    catch
+        warning('Brak pliku cameraman.tif, generowanie szumu.');
+        img_orig = uint8(randi([0 255], 256, 256));
     end
     
-    img_orig = uint8(img_orig);
+    img_size = size(img_orig);
     
-    % Obraz modyfikowany (1 bit)
+    % --- Modified image (for NPCR/UACI) ---
     img_mod = img_orig;
-    img_mod(end) = bitxor(img_mod(end), 1);
+    img_mod(1) = bitxor(img_mod(1), 1); % Change 1 bit
     
-    % --- WAŻNE: Wersje 1D dla funkcji MEX ---
+    % Flattened versions (1D) for C/MEX functions
     img_flat = img_orig(:)';
     img_flat_mod = img_mod(:)';
     
@@ -32,9 +26,9 @@ function data = setup_test_data(custom_img)
     % Pack into output structure
     data.img_orig = img_orig;
     data.img_mod = img_mod;
+    data.img_flat = img_flat;
+    data.img_flat_mod = img_flat_mod;
+    data.size = img_size;
     data.stats.entropy = entropy_orig;
     data.stats.corr = [ch, cv, cd];
-    data.img_flat = img_flat;          % <--- To pole jest wymagane
-    data.img_flat_mod = img_flat_mod;  % <--- To pole jest wymagane
-    data.size = size(img_orig);
 end
