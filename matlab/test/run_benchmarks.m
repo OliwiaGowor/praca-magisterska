@@ -9,53 +9,59 @@ function res = run_benchmarks(data, config)
     for run_idx = 1:N
         fprintf('--- Przebieg %d / %d ---\n', run_idx, N);
         
-        % --- 1. AES (C) ---
+        % --- 1. DES (C) ---
+        try
+            [t_enc, t_dec, C1, C2, PT] = algo_des_c(data);
+            res = helper_update_metrics(res, 1, run_idx, t_enc, t_dec, C1, C2, PT);
+        catch ME
+            warning('DES (C) error: %s', ME.message);
+        end
+        
+        % --- 2. AES (C) ---
         try
             [t_enc, t_dec, C1, C2, PT] = algo_aes_c(data);
-            res = helper_update_metrics(res, 1, run_idx, t_enc, t_dec, C1, C2, PT);
-        catch ME, warning('AES (C) error: %s', ME.message); end
-
-        % --- 2. Blowfish (C) ---
+            res = helper_update_metrics(res, 2, run_idx, t_enc, t_dec, C1, C2, PT);
+        catch ME, warning('AES (C) error: %s', ME.message); 
+        end
+        
+        % --- 3. Blowfish (C) ---
         try
             [t_enc, t_dec, C1, C2, PT] = algo_blowfish_c(data);
-            res = helper_update_metrics(res, 2, run_idx, t_enc, t_dec, C1, C2, PT);
-        catch ME, warning('Blowfish (C) error: %s', ME.message); end
-
-        % --- 3. ChaCha20 (C) ---
+            res = helper_update_metrics(res, 3, run_idx, t_enc, t_dec, C1, C2, PT);
+        catch ME, warning('Blowfish (C) error: %s', ME.message); 
+        end
+        
+        % --- 4. ChaCha20 (C) ---
         try
             [t_enc, t_dec, C1, C2, PT] = algo_chacha_c(data);
-            res = helper_update_metrics(res, 3, run_idx, t_enc, t_dec, C1, C2, PT);
-        catch ME, warning('ChaCha (C) error: %s', ME.message); end
-
-        % --- 4. Chaos (MATLAB) ---
-        try
-            [t_enc, t_dec, C1, C2, PT] = algo_chaos_circular_matlab(data);
             res = helper_update_metrics(res, 4, run_idx, t_enc, t_dec, C1, C2, PT);
-        catch ME, warning('Chaos (MATLAB) error: %s', ME.message); end
-
+        catch ME, warning('ChaCha (C) error: %s', ME.message); 
+        end
+        
         % --- 5. DES (MATLAB) ---
         try
             [t_enc, t_dec, C1, C2, PT] = algo_des_matlab(data);
             res = helper_update_metrics(res, 5, run_idx, t_enc, t_dec, C1, C2, PT);
-        catch ME, warning('DES (MATLAB) error: %s', ME.message); end
-
+        catch ME, warning('DES (MATLAB) error: %s', ME.message); 
+        end
+        
         % --- 6. AES (MATLAB) ---
         try
             [t_enc, t_dec, C1, C2, PT] = algo_aes_matlab(data);
             res = helper_update_metrics(res, 6, run_idx, t_enc, t_dec, C1, C2, PT);
-        catch ME, warning('AES (MATLAB) error: %s', ME.message); end
-
+        catch ME, warning('AES (MATLAB) error: %s', ME.message); 
+        end
+        
         % --- 7. Blowfish (MATLAB) ---
         try
             [t_enc, t_dec, C1, C2, PT] = algo_blowfish_matlab(data);
             res = helper_update_metrics(res, 7, run_idx, t_enc, t_dec, C1, C2, PT);
         catch ME
             warning('Blowfish (MATLAB) error: %s', ME.message); 
-            % Print details because Blowfish.m is sensitive to missing constants file
             fprintf('%s\n', getReport(ME));
         end
         
-        % --- 8. ChaCha20 (Pure MATLAB) ---
+        % --- 8. ChaCha20 (MATLAB) ---
         try
             [t_enc, t_dec, C1, C2, PT] = algo_chacha_matlab(data);
             res = helper_update_metrics(res, 8, run_idx, t_enc, t_dec, C1, C2, PT);
@@ -64,42 +70,62 @@ function res = run_benchmarks(data, config)
             fprintf('%s\n', getReport(ME));
         end
         
-        % --- 9. 3D Logistic + Chirikov (MATLAB) ---
+        % --- 9. Chaos (MATLAB) ---
+        try
+            [t_enc, t_dec, C1, C2, PT] = algo_chaos_circular_matlab(data);
+            res = helper_update_metrics(res, 9, run_idx, t_enc, t_dec, C1, C2, PT);
+        catch ME, warning('Chaos (MATLAB) error: %s', ME.message); 
+        end
+        
+        % --- 10. 3D Logistic + Chirikov (MATLAB) ---
         try
             [t_enc, t_dec, C1, C2, PT] = algo_chaos_map_matlab(data);
-            res = helper_update_metrics(res, 9, run_idx, t_enc, t_dec, C1, C2, PT);
+            res = helper_update_metrics(res, 10, run_idx, t_enc, t_dec, C1, C2, PT);
         catch ME
             warning('Chaotic Map (MATLAB) error: %s', ME.message);
             fprintf('%s\n', getReport(ME));
+        end  
+        
+        % --- 11. Chaos Bit Shuffling (ORIGINAL) ---
+        try
+            [t_enc, t_dec, C1, C2, PT] = algo_chaos_bit_shuffling_original(data);
+            res = helper_update_metrics(res, 11, run_idx, t_enc, t_dec, C1, C2, PT);
+        catch ME
+            warning('Chaos Bit Shuffling (Orig) error: %s', ME.message);
         end
         
-        % --- 10. Chaos Bit Shuffling (Moysis) ---
+        % --- 12. Chaos Bit Shuffling (Moysis) ---
         try
             [t_enc, t_dec, C1, C2, PT] = algo_chaos_bit_shuffling(data);
-            res = helper_update_metrics(res, 10, run_idx, t_enc, t_dec, C1, C2, PT);
+            res = helper_update_metrics(res, 12, run_idx, t_enc, t_dec, C1, C2, PT);
         catch ME
             warning('Chaos Bit Shuffling error: %s', ME.message);
-            % Opcjonalnie wypisz pełny błąd dla debugowania, bo ten algorytm jest skomplikowany
-            % fprintf('%s\n', getReport(ME));
         end
         
-        % % --- 11. Hyperchaotic 2D (S. Liu et al.) ---
+        % --- 13. Hyperchaotic 2D (S. Liu et al.) ---
         try
-            % index 11 musi odpowiadać pozycji w config.titles
             [t_enc, t_dec, C1, C2, PT] = algo_hyperchaotic_2d_matlab(data);
-            res = helper_update_metrics(res, 11, run_idx, t_enc, t_dec, C1, C2, PT);
+            res = helper_update_metrics(res, 13, run_idx, t_enc, t_dec, C1, C2, PT);
         catch ME
             warning('Hyperchaotic 2D error: %s', ME.message);
             fprintf('%s\n', getReport(ME));
         end
         
-        % --- 12. Hu & Tian (Two-Stage Logistic) ---
+        % --- 14. Hu & Tian (Two-Stage Logistic) ---
         try
             [t_enc, t_dec, C1, C2, PT] = algo_hu_tian(data);
-            res = helper_update_metrics(res, 12, run_idx, t_enc, t_dec, C1, C2, PT);
+            res = helper_update_metrics(res, 14, run_idx, t_enc, t_dec, C1, C2, PT);
         catch ME
             warning('Hu & Tian error: %s', ME.message);
-            % fprintf('%s\n', getReport(ME)); 
+        end
+
+        % --- 15. Hyperchaotic Adaptive (Tang) ---
+        try
+            [t_enc, t_dec, C1, C2, PT] = algo_hyperchaotic_adaptive(data);
+            res = helper_update_metrics(res, 15, run_idx, t_enc, t_dec, C1, C2, PT);
+        catch ME
+            warning('Hyperchaotic Adaptive error: %s', ME.message);
+            fprintf('%s\n', getReport(ME));
         end
         
     end

@@ -1,11 +1,14 @@
 function visualize_results(avg, raw, data, config)
-    % VISUALIZE_RESULTS - Generates charts and tables (Fixed for uitable capture)
+    % VISUALIZE_RESULTS - Generuje wizualizacje z informacją o nazwie pliku
     
     titles = config.titles;
     num_algos = length(titles);
     timestamp = datestr(now, 'yyyy-mm-dd_HH-MM-SS');
     
-    % Prepare folder
+    % Nazwa pliku do podpisów
+    img_name = data.filename;
+    [~, fname_only, ~] = fileparts(img_name);
+    
     scriptPath = fileparts(mfilename('fullpath'));
     resultsFolder = fullfile(scriptPath, 'results');
     if ~exist(resultsFolder, 'dir'), mkdir(resultsFolder); end
@@ -13,57 +16,65 @@ function visualize_results(avg, raw, data, config)
     disp('Generowanie wizualizacji...');
 
     %% ============================================================
-    %% FIGURE 1: METRICS REPORT (Chart + Wide Table)
+    %% 1. WYKRES (BAR CHART)
     %% ============================================================
-    % Set 'Visible', 'on' so getframe can capture it
-    hFigMetrics = figure('Name', 'Raport Metryk', 'NumberTitle', 'off', ...
-                         'Position', [50, 50, 1500, 850], 'Color', 'w', 'Visible', 'on');
-    
-    % --- 1. Top: Bar Chart ---
-    subplot(2, 1, 1);
-    set(gca, 'Position', [0.08, 0.50, 0.90, 0.45]); 
+    hFigChart = figure('Name', 'Wykres Czasu', 'NumberTitle', 'off', ...
+                       'Position', [50, 50, 1600, 900], 'Color', 'w', 'Visible', 'on');
     
     t_enc = avg.times_enc(:);
     t_dec = avg.times_dec(:);
-    
-    % Dimension safety check
     min_len = min([length(t_enc), length(t_dec), length(titles)]);
-    if length(t_enc) ~= length(titles)
-        warning('Liczba wyników (%d) różni się od liczby tytułów (%d). Przycinam.', length(t_enc), length(titles));
-    end
-    
     bar_data = [t_enc(1:min_len), t_dec(1:min_len)];
-    plot_titles = titles(1:min_len);
     
     b = bar(bar_data);
     b(1).FaceColor = [0.2 0.6 0.8]; 
     b(2).FaceColor = [0.8 0.4 0.2]; 
     
-    set(gca, 'XTick', 1:min_len, 'XTickLabel', plot_titles);
+    set(gca, 'XTick', 1:min_len, 'XTickLabel', titles(1:min_len), 'FontSize', 10);
+    set(gca, 'TickLabelInterpreter', 'none'); 
     xtickangle(45); 
+    legend('Szyfrowanie', 'Deszyfrowanie', 'Location', 'northeast', 'FontSize', 12);
     
-    legend('Szyfrowanie', 'Deszyfrowanie', 'Location', 'best');
-    title(sprintf('Porównanie Czasu Wykonania (Średnia z %d przebiegów)', config.N_RUNS), 'FontSize', 14);
-    ylabel('Czas (sekundy)');
+    % Tytuł z nazwą pliku
+    title(sprintf('Czas Wykonania dla pliku: %s (Średnia z %d przebiegów)', img_name, config.N_RUNS), ...
+          'FontSize', 16, 'Interpreter', 'none');
+          
+    ylabel('Czas (sekundy)', 'FontSize', 13);
     grid on;
     
     valid_times = t_enc(t_enc > 0);
     if ~isempty(valid_times) && (max(valid_times) / min(valid_times) > 50)
         set(gca, 'YScale', 'log'); 
-        ylabel('Czas (sekundy) - Skala Log');
+        ylabel('Czas (sekundy) - Skala Log', 'FontSize', 13);
     end
+    set(gca, 'Position', [0.06, 0.25, 0.93, 0.68]);
 
-    % --- 2. Bottom: Data Table ---
-    colNames = {'Algorytm', 'T_Enc [s]', 'T_Dec [s]', 'NPCR [%]', 'UACI [%]', 'Entropia', 'Korelacja'};
-    tableData = cell(num_algos, 7);
+    % Zapis z nazwą pliku
+    file_chart = fullfile(resultsFolder, sprintf('chart_%s_%s.png', fname_only, timestamp));
+    saveas(hFigChart, file_chart);
+
+    %% ============================================================
+    %% 2. TABELA WYNIKÓW
+    %% ============================================================
+    row_height_px = 35; header_height_px = 40; font_size_table = 12; window_width = 1900;
+    table_height_px = (num_algos * row_height_px) + header_height_px + 40; % +40 na tytuł
     
-    for i = 1:num_algos
-        if i > length(avg.times_enc)
-            tableData{i,1} = titles{i};
-            tableData{i,2} = 'N/A';
-            continue;
-        end
+    hFigTable = figure('Name', 'Tabela Wyników', 'NumberTitle', 'off', ...
+                       'Position', [50, 50, window_width, table_height_px], ...
+                       'Color', 'w', 'Visible', 'on', 'MenuBar', 'none', 'ToolBar', 'none');
 
+    % Tytuł tekstowy nad tabelą
+    uicontrol('Style', 'text', 'String', sprintf('Wyniki dla pliku: %s', img_name), ...
+              'Position', [20, table_height_px-30, 500, 25], ...
+              'FontSize', 14, 'FontWeight', 'bold', 'HorizontalAlignment', 'left', ...
+              'BackgroundColor', 'w');
+
+    colNames = {'Algorytm', 'T_Enc [s]', 'T_Dec [s]', 'NPCR [%]', 'UACI [%]', 'Entropia', ...
+                'Corr H', 'Corr V', 'Corr D', 'Corr Avg'};
+    
+    tableData = cell(num_algos, 10);
+    for i = 1:num_algos
+        if i > length(avg.times_enc), continue; end
         avg_corr = mean([avg.corr_h(i), avg.corr_v(i), avg.corr_d(i)], 'omitnan');
         
         tableData{i,1} = titles{i};
@@ -72,76 +83,58 @@ function visualize_results(avg, raw, data, config)
         tableData{i,4} = sprintf('%.5f', avg.npcr(i));       
         tableData{i,5} = sprintf('%.5f', avg.uaci(i));
         tableData{i,6} = sprintf('%.5f', avg.entropy(i));
-        tableData{i,7} = sprintf('%.5f', avg_corr);
+        tableData{i,7} = sprintf('%.5f', avg.corr_h(i));
+        tableData{i,8} = sprintf('%.5f', avg.corr_v(i));
+        tableData{i,9} = sprintf('%.5f', avg.corr_d(i));
+        tableData{i,10} = sprintf('%.5f', avg_corr);
     end
     
-    tableHeight = min(0.4, (num_algos + 2) * 0.045); 
-    t = uitable('Parent', hFigMetrics, 'Data', tableData, ...
-                'ColumnName', colNames, ...
-                'RowName', [], ...
-                'Units', 'normalized', ...
-                'Position', [0.01, 0.02, 0.98, tableHeight], ... 
-                'FontSize', 11);
-            
-    t.ColumnWidth = {350, 180, 180, 180, 180, 180, 180};
+    t = uitable('Parent', hFigTable, 'Data', tableData, 'ColumnName', colNames, ...
+                'RowName', [], 'Units', 'normalized', 'Position', [0, 0, 1, 0.94], ... 
+                'FontSize', font_size_table);
+    t.ColumnWidth = {450, 160, 160, 120, 120, 120, 120, 120, 120, 120};
 
-    % --- FIX: Saving figure with table (uitable) ---
-    file_metrics = fullfile(resultsFolder, sprintf('report_metrics_%s.png', timestamp));
-    
-    % Force graphic refresh
-    drawnow; 
-    
-    try
-        % Method 1: getframe (works reliably, screen quality)
-        frame = getframe(hFigMetrics);
-        imwrite(frame.cdata, file_metrics);
-    catch
-        % Fallback: try exportgraphics (newer MATLAB versions) if getframe fails
-        try
-            exportgraphics(hFigMetrics, file_metrics);
-        catch
-            warning('Nie udało się zapisać raportu z tabelą. Pomińmy ten krok.');
-        end
-    end
+    file_table = fullfile(resultsFolder, sprintf('table_%s_%s.png', fname_only, timestamp));
+    drawnow; frame = getframe(hFigTable); imwrite(frame.cdata, file_table);
 
     %% ============================================================
-    %% FIGURE 2: VISUAL GALLERY
+    %% 3. GALERIA WIZUALNA
     %% ============================================================
-    cols = 4; 
-    rows = ceil(num_algos / 2) + 1; 
-    
-    hFigVisuals = figure('Name', 'Galeria Szyfrogramów', 'NumberTitle', 'off', ...
-                         'Position', [150, 150, 1400, 250 * rows], 'Color', 'w');
+    cols = 4; rows = ceil(num_algos / 2) + 1; 
+    hFigVisuals = figure('Name', 'Galeria', 'NumberTitle', 'off', ...
+                         'Position', [100, 100, 1600, 300 * rows], 'Color', 'w');
 
     subplot(rows, cols, [2 3]); 
     imshow([data.img_orig, 255*ones(size(data.img_orig,1), 10, 'uint8'), data.img_mod]);
-    title('LEWA: Oryginał  |  PRAWA: Zmodyfikowany (1px)');
+    title(sprintf('Plik: %s (Oryginał vs Zmodyfikowany)', img_name), 'FontSize', 12, 'Interpreter', 'none');
     axis off;
 
     for i = 1:num_algos
-        if i > length(raw.images_enc) || isempty(raw.images_enc{i})
-            continue; 
-        end
-        
+        if i > length(raw.images_enc) || isempty(raw.images_enc{i}), continue; end
         row_idx = ceil(i/2) + 1;
-        is_second_in_row = mod(i, 2) == 0;
-        if ~is_second_in_row, col_start = 1; else, col_start = 3; end
+        if mod(i, 2) ~= 0, col_start = 1; else, col_start = 3; end
         
         subplot(rows, cols, (row_idx-1)*cols + col_start);
         imshow(raw.images_enc{i});
-        title(sprintf('%s\n(Enc)', titles{i}), 'FontWeight', 'bold', 'Interpreter', 'none');
+        title(sprintf('%s\n(Enc)', titles{i}), 'FontWeight', 'bold', 'Interpreter', 'none', 'FontSize', 10);
         
         subplot(rows, cols, (row_idx-1)*cols + col_start + 1);
         imshow(raw.images_dec{i});
-        title('(Dec)');
+        title('(Dec)', 'FontSize', 10);
     end
 
-    file_visuals = fullfile(resultsFolder, sprintf('report_visuals_%s.png', timestamp));
-    saveas(hFigVisuals, file_visuals); % saveas is safe here (no uitable)
+    file_visuals = fullfile(resultsFolder, sprintf('visuals_%s_%s.png', fname_only, timestamp));
+    saveas(hFigVisuals, file_visuals);
+
+    % --- FIX: Odtworzenie nazwy pliku CSV dla raportu w konsoli ---
+    % Zmienna filename_csv z process_results tu nie istnieje, więc tworzymy string ponownie
+    csv_report_path = fullfile(resultsFolder, sprintf('results_%s_%s.csv', fname_only, timestamp));
 
     fprintf('--------------------------------------------------\n');
-    fprintf(' Raport Metryk:   %s\n', file_metrics);
-    fprintf(' Raport Wizualny: %s\n', file_visuals);
+    fprintf(' Raporty dla pliku: %s\n', img_name);
+    fprintf(' Wykres:  %s\n', file_chart);
+    fprintf(' Tabela:  %s\n', file_table);
+    fprintf(' Galeria: %s\n', file_visuals);
+    fprintf(' CSV:     %s\n', csv_report_path);
     fprintf('--------------------------------------------------\n');
-    disp('Wizualizacja gotowa.');
 end
