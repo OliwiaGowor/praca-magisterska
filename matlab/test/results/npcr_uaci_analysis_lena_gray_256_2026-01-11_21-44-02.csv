@@ -1,0 +1,16 @@
+Image,Algorithm,Run,NPCR_Start,UACI_Start,NPCR_Mid,UACI_Mid,NPCR_End,UACI_End
+images/lena_gray_256.tif,DES-CBC (C),1,99.63226,33.50889,49.78485,16.72227,0.01221,0.00476
+images/lena_gray_256.tif,AES-CBC (C),1,99.58801,33.50142,49.80316,16.65628,0.02441,0.00741
+images/lena_gray_256.tif,Blowfish-CBC (C),1,99.59259,33.54679,49.78027,16.73788,0.01221,0.00474
+images/lena_gray_256.tif,ChaCha20 (C),1,0.00153,0.00001,0.00153,0.00001,0.00153,0.00001
+images/lena_gray_256.tif,DES-CBC (MATLAB*),1,98.86902,33.23293,49.45571,16.54333,0.02422,0.00765
+images/lena_gray_256.tif,AES-CBC (MATLAB*),1,99.62769,33.39233,49.83368,16.73200,0.02441,0.01048
+images/lena_gray_256.tif,Blowfish-CBC (MATLAB*),1,99.59259,33.52680,49.81537,16.79122,0.01221,0.00268
+images/lena_gray_256.tif,ChaCha20 (MATLAB*),1,0.00153,0.00001,0.00153,0.00001,0.00153,0.00001
+images/lena_gray_256.tif,Chaos Circular Shifts (MATLAB),1,99.60480,33.31684,99.61853,33.38388,99.60938,33.46882
+images/lena_gray_256.tif,3D-Logistic-Chirikov (MATLAB),1,0.00000,0.00000,0.00153,0.00002,0.00458,0.00115
+images/lena_gray_256.tif,Chaos Bit Shuffling (MATLAB - Orig),1,99.58649,33.47687,99.58649,33.47707,99.63531,33.50337
+images/lena_gray_256.tif,Chaos Bit Shuffling (MATLAB* - Opt),1,99.62921,33.66490,99.62921,33.66452,99.63684,33.58133
+images/lena_gray_256.tif,Hyperchaotic and 2D Sensing (MATLAB*),1,99.67651,33.65189,99.96338,33.43176,99.69940,33.56590
+images/lena_gray_256.tif,Hu & Tian - Two-Stage Logistic (MATLAB*),1,0.00153,0.00001,0.00153,0.00001,0.00153,0.00001
+images/lena_gray_256.tif,Hyperchaotic Adaptive (MATLAB*),1,99.60938,33.50314,99.62921,33.53488,99.60327,33.57653
