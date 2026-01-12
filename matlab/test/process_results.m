@@ -1,5 +1,5 @@
-function avg = process_results(raw, data, config)
-    % PROCESS_RESULTS - Zapisuje wyniki (w tym ORYGINAŁ w CSV)
+function avg = process_results(raw, data, config, output_folder)
+    % PROCESS_RESULTS - Zapisuje wyniki w podanym folderze
     
     % Średnie
     avg.times_enc = mean(raw.times_enc, 2, 'omitnan');
@@ -15,16 +15,20 @@ function avg = process_results(raw, data, config)
 
     timestamp = datestr(now, 'yyyy-mm-dd_HH-MM-SS');
     [~, fname_only, ~] = fileparts(data.filename);
-    if ~exist('results', 'dir'), mkdir('results'); end
     
-    save(sprintf('results/full_results_%s_%s.mat', fname_only, timestamp), 'avg', 'raw', 'config');
+    % Upewnij się, że folder istnieje
+    if ~exist(output_folder, 'dir'), mkdir(output_folder); end
+    
+    % --- 1. Zapisz MAT ---
+    mat_file = fullfile(output_folder, sprintf('full_results_%s.mat', timestamp));
+    save(mat_file, 'avg', 'raw', 'config', 'data');
 
-    % --- CSV GŁÓWNY ---
-    f_main = sprintf('results/main_metrics_%s_%s.csv', fname_only, timestamp);
+    % --- 2. CSV GŁÓWNY ---
+    f_main = fullfile(output_folder, sprintf('main_metrics_%s.csv', timestamp));
     fid = fopen(f_main, 'w');
     fprintf(fid, 'Plik,Algorytm,Przebieg,Czas_Szyfr,Czas_Deszyfr,Entropia,Kor_Poz,Kor_Pion,Kor_Diag,Kor_Srednia\n');
     
-    % 1. Wiersz z ORYGINAŁEM
+    % Wiersz z ORYGINAŁEM
     if isfield(data, 'stats')
         e_orig = data.stats.entropy;
         c_h = data.stats.corr(1); c_v = data.stats.corr(2); c_d = data.stats.corr(3);
@@ -33,7 +37,6 @@ function avg = process_results(raw, data, config)
             data.filename, e_orig, c_h, c_v, c_d, c_avg);
     end
     
-    % 2. Wiersze z ALGORYTMAMI
     [num_algos, num_runs] = size(raw.times_enc);
     for i=1:num_algos
         safe_name = strrep(config.titles{i}, ',', ';');
@@ -47,8 +50,8 @@ function avg = process_results(raw, data, config)
     end
     fclose(fid);
     
-    % --- CSV WRAŻLIWOŚĆ ---
-    f_sens = sprintf('results/npcr_uaci_analysis_%s_%s.csv', fname_only, timestamp);
+    % --- 3. CSV WRAŻLIWOŚĆ ---
+    f_sens = fullfile(output_folder, sprintf('npcr_uaci_analysis_%s.csv', timestamp));
     fid = fopen(f_sens, 'w');
     fprintf(fid, 'Plik,Algorytm,Przebieg,NPCR_Poczatek,UACI_Poczatek,NPCR_Srodek,UACI_Srodek,NPCR_Koniec,UACI_Koniec\n');
     
@@ -63,6 +66,4 @@ function avg = process_results(raw, data, config)
         end
     end
     fclose(fid);
-    
-    fprintf('CSV Główny (z oryginałem): %s\n', f_main);
 end

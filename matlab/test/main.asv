@@ -1,7 +1,7 @@
-% === main.m: Main driver (NO WARM-UP) ===
+% === main.m: Główny Sterownik Testów Wsadowych (Batch Driver) ===
 clear; clc; close all;
 
-% --- Path configuration ---
+% --- 1. KONFIGURACJA ŚCIEŻEK ---
 currentPath = fileparts(mfilename('fullpath'));
 addpath(fullfile(currentPath, 'metrics'));
 addpath(fullfile(currentPath, 'AES')); 
@@ -16,10 +16,25 @@ addpath(fullfile(currentPath, 'chaos_logistic'));
 addpath(fullfile(currentPath, 'hyperchaotic_adaptive'));
 addpath(fullfile(currentPath, 'images'));
 
-% --- Test configuration ---
-config.N_RUNS = 50; 
+% --- 2. KONFIGURACJA TESTÓW ---
 
-% List of algorithm titles
+% A. Lista obrazów do przetestowania
+% Podaj ścieżki do plików (względne lub bezwzględne)
+images_list = {
+    'images/lena_gray_256.tif', ...
+    'images/lena_gray_512.tif', ...
+    'texmos3.s512.tiff',
+    'cameraman.tif' 
+    % Możesz dodać tutaj dowolną liczbę plików
+};
+
+% B. Liczba przebiegów dla KAŻDEGO obrazu
+config.N_RUNS = 1; 
+
+% C. Czy uruchamiać analizę ataków? (Może być czasochłonne)
+run_attacks = false; 
+
+% D. Lista algorytmów (Musi pasować do run_benchmarks.m)
 config.titles = { ...
     'DES-CBC (C)', ...
     'AES-CBC (C)', ...
@@ -38,29 +53,88 @@ config.titles = { ...
     'Hyperchaotic Adaptive (MATLAB*)', ...
 };
 
-fprintf('=== START TESTÓW (Przebiegi: %d) ===\n', config.N_RUNS);
+% E. Folder główny dla wyników
+main_results_dir = fullfile(currentPath, 'results_batch');
+if ~exist(main_results_dir, 'dir'), mkdir(main_results_dir); end
 
-% 1. Data preparation
-[data] = setup_test_data();
+fprintf('=== START TESTÓW WSADOWYCH ===\n');
+fprintf('Liczba obrazów w kolejce: %d\n', length(images_list));
+fprintf('Liczba przebiegów na obraz: %d\n', config.N_RUNS);
+fprintf('Wyniki trafią do: %s\n', main_results_dir);
 
-% 2. Run benchmarks
-raw_results = run_benchmarks(data, config);
-
-% 3. Process and save results
-avg_results = process_results(raw_results, data, config);
-
-% 4. Visualization
-visualize_results(avg_results, raw_results, data, config);
-
-% --- Attack Analysis ---
-run_attacks = false; % Set to false to skip (computationally intensive)
-if run_attacks
-    % Ensure metrics path is added
-    addpath(fullfile(currentPath, 'metrics')); 
+% --- 3. GŁÓWNA PĘTLA PO OBRAZACH ---
+for img_idx = 1:length(images_list)
+    current_image = images_list{img_idx};
     
-    fprintf('\n--- Uruchamianie rozszerzonej analizy ataków (Alteration Attacks) ---\n');
-    % Run comprehensive alteration analysis
-    run_alteration_analysis(data);
+    fprintf('\n------------------------------------------------------------\n');
+    fprintf('>>> [%d/%d] Przetwarzanie obrazu: %s\n', img_idx, length(images_list), current_image);
+    
+    try
+        % A. Przygotowanie danych (Wczytanie obrazu)
+        % setup_test_data musi przyjmować argument nazwy pliku!
+        [data] = setup_test_data(current_image);
+        
+        % B. Przygotowanie folderu wynikowego dla tego konkretnego obrazu
+        [~, fname_only, ~] = fileparts(data.filename);
+        timestamp = datestr(now, 'yyyy-mm-dd_HH-MM-SS');
+        % Folder np.: results_batch/lena_gray_256_2026-01-11_22-00-00
+        current_output_folder = fullfile(main_results_dir, sprintf('%s_%s', fname_only, timestamp));
+        if ~exist(current_output_folder, 'dir'), mkdir(current_output_folder); end
+        
+        % C. Uruchomienie benchmarków (Szyfrowanie/Deszyfrowanie)
+        fprintf('   -> Uruchamianie benchmarków...\n');
+        raw_results = run_benchmarks(data, config);
+        
+        % D. Przetwarzanie i zapis wyników
+        fprintf('   -> Zapisywanie danych (MAT, CSV)...\n');
+        avg_results = process_results(raw_results, data, config, current_output_folder);
+        
+        % E. Wizualizacja (PNG)
+        fprintf('   -> Generowanie tabel i wykresów...\n');
+        visualize_results(avg_results, raw_results, data, config, current_output_folder);
+        
+        % F. Analiza Ataków (Opcjonalna)
+        if run_attacks
+            fprintf('   -> Uruchamianie analizy ataków (Alteration Analysis)...\n');
+            try
+                % Uwaga: Funkcja run_alteration_analysis może zapisywać wyniki
+                % w domyślnym folderze 'results'. W przyszłości warto ją dostosować.
+                run_alteration_analysis(data); 
+            catch ME_attack
+                warning('   [!] Błąd podczas analizy ataków: %s', ME_attack.message);
+            end
+        end
+        
+        fprintf('   [OK] Zakończono dla: %s\n', fname_only);
+        
+    catch ME
+        % Obsługa błędów - nie przerywa pętli, przechodzi do następnego obrazu
+        fprintf('\n!!! BŁĄD KRYTYCZNY przy obrazie "%s" !!!\n', current_image);
+        fprintf('Komunikat błędu: %s\n', ME.message);
+        fprintf('Raport błędów: %s\n', getReport(ME, 'extended', 'hyperlinks', 'off'));
+        fprintf('Pomijam ten plik i przechodzę do następnego.\n');
+    end
+    
+    % --- 4. AGRESYWNE CZYSZCZENIE PAMIĘCI ---
+    % Zapobiega wyciekom pamięci przy dużej liczbie obrazów/przebiegów
+    fprintf('   -> Czyszczenie pamięci RAM...\n');
+    
+    % Zamknij wszystkie figury (wykresy/tabele)
+    close all;
+    
+    % Zamknij wszystkie uchwyty plików (CSV/TXT)
+    fclose('all');
+    
+    % Wyczyść zmienne z pamięci workspace (zostaw tylko konfigurację pętli)
+    clear data raw_results avg_results current_output_folder fname_only timestamp;
+    
+    % Wymuś garbage collection Javy (MATLAB UI używa Javy)
+    java.lang.System.gc();
+    
+    % Krótka pauza dla systemu operacyjnego
+    pause(1);
 end
 
-fprintf('\n=== ZAKOŃCZONO POMYŚLNIE ===\n');
+fprintf('\n=========================================\n');
+fprintf('   ZAKOŃCZONO WSZYSTKIE TESTY WSADOWE    \n');
+fprintf('=========================================\n');

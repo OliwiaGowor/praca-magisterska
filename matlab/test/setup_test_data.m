@@ -1,15 +1,15 @@
-function data = setup_test_data()
-    % SETUP_TEST_DATA - Przygotowuje obrazy (Oryginał + 3 Modyfikacje) + Statystyki
+function data = setup_test_data(filename_input)
+    % SETUP_TEST_DATA - Wczytuje obraz wskazany argumentem i przygotowuje dane
     
-    % --- Konfiguracja ścieżki do pliku ---
-    target_file = 'images/lena_gray_256.tif'; 
-    % Możesz tu zmienić na: 'images/pl23_con00216.jpg' itp.
-    
-    if exist(target_file, 'file')
-        filename = target_file;
+    if nargin < 1
+        error('Funkcja setup_test_data wymaga podania ścieżki do pliku!');
+    end
+
+    if exist(filename_input, 'file')
+        filename = filename_input;
         img_orig = imread(filename);
     else
-        warning('Plik %s nie istnieje. Używam "cameraman.tif".', target_file);
+        warning('Plik %s nie istnieje. Używam "cameraman.tif" jako fallback.', filename_input);
         filename = 'cameraman.tif';
         img_orig = imread(filename);
     end
@@ -38,15 +38,13 @@ function data = setup_test_data()
     img_mod_end = img_orig;
     img_mod_end(end) = bitxor(img_mod_end(end), 1);
     
-    % --- OBLICZANIE STATYSTYK ORYGINAŁU (Tego brakowało) ---
+    % --- OBLICZANIE STATYSTYK ORYGINAŁU ---
     try
-        % Zakładamy, że funkcje metryk są w ścieżce (dodane w main.m)
         entropy_orig = calculate_entropy(img_orig);
         [ch, cv, cd] = calculate_correlation(img_orig);
     catch ME
         warning('Nie można obliczyć metryk oryginału: %s', ME.message);
-        entropy_orig = 0;
-        ch = 0; cv = 0; cd = 0;
+        entropy_orig = 0; ch = 0; cv = 0; cd = 0;
     end
     
     % --- Pakowanie danych do struktury ---
@@ -59,7 +57,7 @@ function data = setup_test_data()
     data.stats.entropy = entropy_orig;
     data.stats.corr    = [ch, cv, cd];
     
-    % Wersje zmodyfikowane (Macierze i Płaskie)
+    % Wersje zmodyfikowane
     data.img_mod_start = img_mod_start;
     data.img_flat_mod_start = img_mod_start(:)';
     
@@ -69,7 +67,7 @@ function data = setup_test_data()
     data.img_mod_end = img_mod_end;
     data.img_flat_mod_end = img_mod_end(:)';
     
-    % Domyślne pola (dla kompatybilności wstecznej z resztą kodu)
-    data.img_mod = img_mod_mid;       % Domyślnie bierzemy środkowy do wykresów
+    % Domyślne pola
+    data.img_mod = img_mod_mid;
     data.img_flat_mod = img_mod_mid(:)';
 end
