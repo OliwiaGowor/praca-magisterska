@@ -21,10 +21,7 @@ addpath(fullfile(currentPath, 'images'));
 % A. Lista obrazów do przetestowania
 % Podaj ścieżki do plików (względne lub bezwzględne)
 images_list = {
-    'images/texmos1.p512.tiff', ...
-    'images/white.tiff', ...
     'images/black.tiff', ...
-    'images/lake.tif' 
     % Możesz dodać tutaj dowolną liczbę plików
 };
 

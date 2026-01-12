@@ -21,15 +21,12 @@ addpath(fullfile(currentPath, 'images'));
 % A. Lista obrazów do przetestowania
 % Podaj ścieżki do plików (względne lub bezwzględne)
 images_list = {
-    'images/lena_gray_256.tif', ...
-    'images/lena_gray_512.tif', ...
-    'texmos3.s512.tiff',
-    'cameraman.tif' 
+    'images/black.tiff', ...
     % Możesz dodać tutaj dowolną liczbę plików
 };
 
 % B. Liczba przebiegów dla KAŻDEGO obrazu
-config.N_RUNS = 1; 
+config.N_RUNS = 100; 
 
 % C. Czy uruchamiać analizę ataków? (Może być czasochłonne)
 run_attacks = false; 
