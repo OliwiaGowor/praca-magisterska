@@ -4,7 +4,7 @@ clear; clc; close all;
 % --- Path configuration ---
 currentPath = fileparts(mfilename('fullpath'));
 addpath(fullfile(currentPath, 'metrics'));
-addpath(fullfile(currentPath, 'AES')); 
+addpath(fullfile(currentPath, 'AES'));
 addpath(fullfile(currentPath, 'DES'));
 addpath(fullfile(currentPath, 'chaos_circular'));
 addpath(fullfile(currentPath, 'blowfish'));
@@ -17,7 +17,9 @@ addpath(fullfile(currentPath, 'hyperchaotic_adaptive'));
 addpath(fullfile(currentPath, 'images'));
 
 % --- Test configuration ---
-config.N_RUNS = 1; 
+config.N_RUNS = 1;
+run_attacks = true; % Set to false to skip (computationally intensive)
+run_benchmarks = false; % Set to false to skip (computationally intensive)
 
 % List of algorithm titles
 config.titles = { ...
@@ -36,28 +38,30 @@ config.titles = { ...
     'Hyperchaotic and 2D Sensing (MATLAB*)', ...
     'Hu & Tian - Two-Stage Logistic (MATLAB*)', ...
     'Hyperchaotic Adaptive (MATLAB*)', ...
-};
+    };
 
 fprintf('=== START TESTÓW (Przebiegi: %d) ===\n', config.N_RUNS);
 
 % 1. Data preparation
 [data] = setup_test_data();
 
-% 2. Run benchmarks
-raw_results = run_benchmarks(data, config);
+if run_benchmarks
+    % 2. Run benchmarks
+    raw_results = run_benchmarks(data, config);
 
-% 3. Process and save results
-avg_results = process_results(raw_results, data, config);
+    % 3. Process and save results
+    avg_results = process_results(raw_results, data, config);
 
-% 4. Visualization
-visualize_results(avg_results, raw_results, data, config);
+    % 4. Visualization
+    visualize_results(avg_results, raw_results, data, config);
 
+end
 % --- Attack Analysis ---
-run_attacks = false; % Set to false to skip (computationally intensive)
+
 if run_attacks
     % Ensure metrics path is added
-    addpath(fullfile(currentPath, 'metrics')); 
-    
+    addpath(fullfile(currentPath, 'metrics'));
+
     fprintf('\n--- Uruchamianie rozszerzonej analizy ataków (Alteration Attacks) ---\n');
     % Run comprehensive alteration analysis
     run_alteration_analysis(data);

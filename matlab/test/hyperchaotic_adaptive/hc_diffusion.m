@@ -1,10 +1,12 @@
 function out_flat = hc_diffusion(channel, seq_hist)
     % HC_DIFFUSION Realizuje Self-Adaptive Diffusion (Forward) - ZOPTIMALIZOWANA
     
-    pixels = channel'; 
-    pixels = pixels(:);
+    % ZMIANA: Usunięto transpozycję (channel'). 
+    % Teraz pixels pobiera dane kolumnami, co jest zgodne z reshape.
+    pixels = channel(:); 
+    
     N = length(pixels);
-    out_flat = zeros(N, 1, 'uint8'); % Pre-alokacja jako uint8
+    out_flat = zeros(N, 1, 'uint8');
     
     % Inicjalizacja histogramu sekwencją chaotyczną
     hist_counts = seq_hist(:); 
