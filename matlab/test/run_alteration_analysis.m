@@ -106,10 +106,10 @@ function run_alteration_analysis(data)
 
     % --- 3. Attack Configuration ---
     attack_configs = {
-        'contiguous_crop', [0.1, 0.2, 0.3, 0.5];
-        'crop',            [0.1, 0.2, 0.3, 0.5];
-        'tamper',          [0.1, 0.2, 0.3, 0.5];
-        'salt_pepper',     [0.01, 0.05, 0.1, 0.2];
+        'contiguous_crop', [0.1, 0.25, 0.5, 0.75];
+        'crop',            [0.1, 0.25, 0.5, 0.75];
+        'tamper',          [0.1, 0.25, 0.5, 0.75];
+        'salt_pepper',     [0.05, 0.10, 0.25, 0.5];
         'gaussian',        [0.00001, 0.0001, 0.001, 0.01];
     };
     
@@ -159,45 +159,45 @@ function run_alteration_analysis(data)
             for i = 1:length(intensities)
                 inte = intensities(i);
                 
-                % --- MODYFIKACJA DLA TAMPER: Nadpisujemy blok, zamiast używać apply_attack ---
-                if strcmp(att_type, 'tamper')
+                % --- MODYFIKACJA: Ataki w LEWYM GÓRNYM ROGU (1,1) ---
+                if strcmp(att_type, 'tamper') || strcmp(att_type, 'contiguous_crop')
                     C_prim = C_base;
                     
-                    % Oblicz rozmiar bloku (kwadrat)
+                    % 1. Oblicz ile pikseli zmienić
                     total_pixels = numel(C_base);
-                    tamper_pixels = round(total_pixels * inte);
-                    block_side = round(sqrt(tamper_pixels));
+                    affected_pixels = round(total_pixels * inte);
                     
-                    % Ustal środek obrazu (jeśli 2D) lub wektora
                     if isvector(C_prim)
-                        start_idx = max(1, floor(total_pixels/2 - tamper_pixels/2));
-                        end_idx = min(total_pixels, start_idx + tamper_pixels - 1);
+                        % Wektor: Zmieniamy początek (indeks 1)
+                        end_idx = min(total_pixels, affected_pixels);
                         
-                        % Nadpisz wektor wartościami z img_tamper (też spłaszczonego)
-                        img_t_flat = img_tamper(:);
-                        % Dopasuj rozmiar do wycinka
-                        range_len = end_idx - start_idx + 1;
-                        if range_len > 0
-                            % Pobierz fragment ze środka obrazu fałszywego
-                            mid_t = floor(numel(img_t_flat)/2);
-                            t_start = max(1, mid_t - floor(range_len/2));
-                            t_end = t_start + range_len - 1;
-                            C_prim(start_idx:end_idx) = img_t_flat(t_start:t_end);
+                        if strcmp(att_type, 'tamper')
+                            img_t_flat = img_tamper(:);
+                            % Zabezpieczenie na wypadek gdyby img_tamper był mniejszy
+                            len_to_copy = min(numel(img_t_flat), end_idx);
+                            C_prim(1:len_to_copy) = img_t_flat(1:len_to_copy);
+                        else
+                            % Contiguous Crop -> Wyzeruj początek
+                            C_prim(1:end_idx) = 0;
                         end
                     else
-                        % Dla macierzy 2D
+                        % Macierz 2D: Kwadrat w lewym górnym rogu
+                        block_side = round(sqrt(affected_pixels));
                         [rows, cols] = size(C_prim);
-                        r_start = max(1, round(rows/2 - block_side/2));
-                        c_start = max(1, round(cols/2 - block_side/2));
-                        r_end = min(rows, r_start + block_side - 1);
-                        c_end = min(cols, c_start + block_side - 1);
                         
-                        % Nadpisz blok
-                        C_prim(r_start:r_end, c_start:c_end) = ...
-                            img_tamper(r_start:r_end, c_start:c_end);
+                        % Ustal granice bloku w rogu (1,1)
+                        r_end = min(rows, block_side);
+                        c_end = min(cols, block_side);
+                        
+                        if strcmp(att_type, 'tamper')
+                            C_prim(1:r_end, 1:c_end) = img_tamper(1:r_end, 1:c_end);
+                        else
+                            % Contiguous Crop -> Wyzeruj blok w rogu
+                            C_prim(1:r_end, 1:c_end) = 0;
+                        end
                     end
                 else
-                    % Inne ataki (crop, noise) idą standardowo
+                    % Pozostałe ataki (szum, losowe wycinanie) obsługiwane standardowo
                     C_prim = apply_attack(C_base, att_type, inte, img_tamper);
                 end
                 
