@@ -23,7 +23,9 @@ function res = run_benchmarks(data, config)
         @algo_chaos_bit_shuffling, ... % Optimized
         @algo_hyperchaotic_2d_matlab, ...
         @algo_hu_tian, ...
-        @algo_hyperchaotic_adaptive
+        @algo_hyperchaotic_adaptive, ...
+        @algo_aes_pixel, ...  % <-- DODAJ TU
+        @algo_des_pixel, ...  % <-- DODAJ TU
     };
     
     for run_idx = 1:N

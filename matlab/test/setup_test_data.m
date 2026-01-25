@@ -2,7 +2,7 @@ function data = setup_test_data()
     % SETUP_TEST_DATA - Przygotowuje obrazy (Oryginał + 3 Modyfikacje) + Statystyki
     
     % --- Konfiguracja ścieżki do pliku ---
-    target_file = 'images/lena_gray_256.tif'; 
+    target_file = 'images/white.tiff'; 
     % Możesz tu zmienić na: 'images/pl23_con00216.jpg' itp.
     
     if exist(target_file, 'file')

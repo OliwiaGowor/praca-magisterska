@@ -19,7 +19,7 @@ addpath(fullfile(currentPath, 'images'));
 % --- Test configuration ---
 config.N_RUNS = 1;
 run_attacks = true; % Set to false to skip (computationally intensive)
-run_benchmarks = false; % Set to false to skip (computationally intensive)
+should_run_benchmarks = false; % Set to false to skip (computationally intensive)
 
 % List of algorithm titles
 config.titles = { ...
@@ -38,6 +38,8 @@ config.titles = { ...
     'Hyperchaotic and 2D Sensing (MATLAB*)', ...
     'Hu & Tian - Two-Stage Logistic (MATLAB*)', ...
     'Hyperchaotic Adaptive (MATLAB*)', ...
+    'AES (Pixel/ECB Mode)', ...
+    'DES (Pixel/ECB Mode)', ...
     };
 
 fprintf('=== START TESTÓW (Przebiegi: %d) ===\n', config.N_RUNS);
@@ -45,7 +47,7 @@ fprintf('=== START TESTÓW (Przebiegi: %d) ===\n', config.N_RUNS);
 % 1. Data preparation
 [data] = setup_test_data();
 
-if run_benchmarks
+if should_run_benchmarks
     % 2. Run benchmarks
     raw_results = run_benchmarks(data, config);
 
