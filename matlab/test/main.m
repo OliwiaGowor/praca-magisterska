@@ -17,9 +17,9 @@ addpath(fullfile(currentPath, 'hyperchaotic_adaptive'));
 addpath(fullfile(currentPath, 'images'));
 
 % --- Test configuration ---
-config.N_RUNS = 1;
+config.N_RUNS = 100;
 run_attacks = true; % Set to false to skip (computationally intensive)
-should_run_benchmarks = false; % Set to false to skip (computationally intensive)
+should_run_benchmarks = true; % Set to false to skip (computationally intensive)
 
 % List of algorithm titles
 config.titles = { ...
