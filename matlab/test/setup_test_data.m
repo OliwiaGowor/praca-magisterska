@@ -3,7 +3,6 @@ function data = setup_test_data()
     
     % --- Konfiguracja ścieżki do pliku ---
     target_file = 'images/4.2.03.tiff'; 
-    % Możesz tu zmienić na: 'images/pl23_con00216.jpg' itp.
     
     if exist(target_file, 'file')
         filename = target_file;

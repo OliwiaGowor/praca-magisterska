@@ -16,10 +16,10 @@ function output = aes_mode(data, key, iv, mode, algorithm)
     if ischar(data) || isstring(data), data = uint8(char(data)); end
     key = uint8(key);
     iv  = uint8(iv);
-
+    
     % Load Schedule & Tables once
     [w, Nr, s_box, inv_s_box, m9, m11, m13, m14] = aes_init(key); 
-
+    
     % --- Processing ---
     if strcmp(algorithm, 'cbc')
         if strcmp(mode, 'encrypt')
@@ -68,7 +68,7 @@ function plaintext = cbc_decrypt_vectorized(ciphertext, w, Nr, inv_s_box, iv, m9
     if mod(length(ciphertext), 16) ~= 0
         error('Długość szyfrogramu musi być wielokrotnością 16 dla deszyfrowania CBC.');
     end
-
+    
     % 1. Batch Decrypt
     % Decrypts all blocks simultaneously using the vectorized core
     decrypted_stream = aes_inv_cipher_vectorized(ciphertext, w, Nr, inv_s_box, m9, m11, m13, m14);
@@ -78,20 +78,25 @@ function plaintext = cbc_decrypt_vectorized(ciphertext, w, Nr, inv_s_box, iv, m9
     prev_blocks = [iv, ciphertext(1:end-16)];
     padded_plaintext = bitxor(decrypted_stream, prev_blocks);
     
-    % 3. Validate & Remove PKCS#7 Padding
+    % 3. Validate & Remove PKCS#7 Padding (CRITICAL SECURITY CHECK)
+    if isempty(padded_plaintext)
+         error('AES:EmptyInput', 'Brak danych do odszyfrowania.');
+    end
+
     pad_len = double(padded_plaintext(end));
     
+    % Sprawdzenie 1: Czy długość paddingu jest logiczna (1-16 bajtów)
     if pad_len > 16 || pad_len == 0
-        warning('Nieprawidłowa długość paddingu. Wynik prawdopodobnie uszkodzony.');
-        plaintext = padded_plaintext; return;
+        error('AES:BadPadding', 'CRITICAL ERROR: Invalid PKCS#7 padding length (%d). Data corrupted.', pad_len);
     end
     
+    % Sprawdzenie 2: Czy wszystkie bajty paddingu mają tę samą wartość
     padding_bytes = padded_plaintext(end-pad_len+1 : end);
     if any(padding_bytes ~= pad_len)
-        warning('Nieprawidłowe bajty paddingu. Wynik prawdopodobnie uszkodzony.');
-        plaintext = padded_plaintext; return;
+        error('AES:BadPadding', 'CRITICAL ERROR: Padding integrity violated. Checksum failed.');
     end
     
+    % Jeśli doszliśmy tutaj, padding jest poprawny -> usuwamy go
     plaintext = padded_plaintext(1 : end-pad_len);
 end
 
