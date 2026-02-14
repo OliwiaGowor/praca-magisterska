@@ -1,15 +1,15 @@
 clear; clc; close all;
 
-%% === USTAWIENIA GLOBALNE ===
-res_x = 800;          % Rozdzielczość pozioma (liczba kroków parametru)
-n_discard = 500;      % Odrzucenie stanu przejściowego
-n_keep = 400;         % Liczba punktów do narysowania na diagramie
-n_iter_lle = 1000;    % Liczba iteracji do obliczenia LLE
+%% === GLOBAL SETTINGS ===
+res_x = 800;          % Horizontal resolution (number of parameter steps)
+n_discard = 500;      % Discarding transient state
+n_keep = 400;         % Number of points to plot on the diagram
+n_iter_lle = 1000;    % Number of iterations to calculate LLE
 
 if isempty(gcp('nocreate')), parpool; end
 fprintf('=== START SYMULACJI (DIAGRAMY CZARNO-BIAŁE) ===\n');
 
-%% --- 1. UKŁAD KOSINUSOWO-WIELOMIANOWY ---
+%% --- 1. COSINE-POLYNOMIAL MAP ---
 fprintf('[1/7] Układ Kosinusowo-Wielomianowy...\n');
 a_cos = 4;
 mu_vals = linspace(0, 5, res_x);
@@ -125,7 +125,7 @@ end
 save_plots(3, A_vals, bifur_3, lle_3, '3_Soboleva', 'A', 'Odwzorowanie Soboleva-Modulo', [0 1]);
 
 
-%% --- 4. 2D-RA MAP (ZMODYFIKOWANE RYSOWANIE) ---
+%% --- 4. 2D-RA MAP ---
 fprintf('[4/7] Układ 2D-RA Map...\n');
 bias = 1e8; beta_ra = 1;
 alpha_vals_int = 0:(res_x-1); 
@@ -137,7 +137,7 @@ parfor i = 1:res_x
     const_beta = beta_ra + bias; const_alpha = alpha + bias;
     x=0.5; y=0.5;
     
-    % Rozbieg
+    % Transient
     for k=1:n_discard
         ts = sqrt(0.5*x^2+0.5*y^2); if ts<1e-10, ts=1e-10; end
         ex = exp(-0.2*ts); ey = exp(0.5*cos(2*pi*x)+0.5*cos(2*pi*y));
@@ -145,7 +145,7 @@ parfor i = 1:res_x
         yn = mod(y^2 - const_beta*cos(2*pi*y) - const_alpha*ey + exp(1), 1);
         x=xn; y=yn;
     end
-    % Zapis
+    % Recording
     for k=1:n_keep
         ts = sqrt(0.5*x^2+0.5*y^2); if ts<1e-10, ts=1e-10; end
         ex = exp(-0.2*ts); ey = exp(0.5*cos(2*pi*x)+0.5*cos(2*pi*y));
@@ -175,9 +175,7 @@ parfor i = 1:res_x
     lle_4(:, i) = [s1/n_iter_lle; s2/n_iter_lle];
 end
 
-% Manualny zapis 2D-RA (DOSTOSOWANY)
 f = figure('Visible','off', 'Position', [0 0 1000 600]);
-% Zmieniono MarkerSize na 0.1 (z 0.5) dla spójności i przejrzystości
 plot(alpha_vals_int, bifur_4, 'k.', 'MarkerSize', 0.1); 
 title('Diagram Bifurkacyjny - Odwzorowanie 2D-RA');
 xlabel('\alpha'); ylabel('x'); 
@@ -186,11 +184,9 @@ grid on;
 saveas(f, '4_2DRA_bifurkacyjny.png'); close(f);
 
 f = figure('Visible','off', 'Position', [0 0 1000 400]);
-% Pogrubiono linie i dodano margines
 plot(alpha_vals_int, lle_4(1,:), 'b-', 'LineWidth', 1.2); hold on; 
 plot(alpha_vals_int, lle_4(2,:), 'g--', 'LineWidth', 1.2);
 axis tight; ylim('auto');
-% Dodanie marginesu dla wysokich wartości (ok 18.4)
 yl = ylim; m = (yl(2)-yl(1))*0.1; if m==0, m=1; end; ylim([yl(1)-m yl(2)+m]);
 legend('\lambda_1', '\lambda_2', 'Location', 'best');
 title('Wykładniki Lapunowa - Odwzorowanie 2D-RA'); 
@@ -198,7 +194,7 @@ xlabel('\alpha'); ylabel('\lambda'); grid on;
 saveas(f, '4_2DRA_LLE.png'); close(f);
 
 
-%% --- 5. TWO-STAGE LOGISTIC MAP (POPRAWIONY PARFOR) ---
+%% --- 5. TWO-STAGE LOGISTIC MAP ---
 fprintf('[5/7] Generowanie poprawnego Two-Stage Logistic Map...\n');
 
 res_x = 800;          
@@ -206,55 +202,55 @@ n_discard = 1000;
 n_keep = 500;         
 n_iter_lle = 2000;    
 
-% Parametr r (gamma) z zakresu 3 do 4
+% Parameter r (gamma) in range 3 to 4
 r_vals = linspace(3, 4, res_x); 
 bifur_5 = zeros(n_keep, res_x); 
 lle_5 = zeros(1, res_x);
 
-% Jeśli pool nie jest otwarty, otwórz go
+% If pool is not open, open it
 if isempty(gcp('nocreate')), parpool; end
 
 parfor i = 1:res_x
     r = r_vals(i);
     x = 0.1;
     
-    % --- ZMIENNA TYMCZASOWA DLA PARFOR ---
-    % Tworzymy wektor tylko dla tej iteracji 'i'
+    % TEMPORARY VARIABLE FOR PARFOR
+    % Create vector only for this iteration 'i'
     temp_bifur_col = zeros(n_keep, 1);
     
-    % 1. Pętla Bifurkacyjna (Transient + Zapis)
+    % 1. Bifurcation Loop (Transient + Recording)
     for k = 1:n_discard + n_keep
-        % Symetryczny wzór (Double Hump)
+        % Symmetric formula (Double Hump)
         if x < 0.5
             x = 4 * r * x * (0.5 - x);
         else
-            % Poprawna gałąź symetryczna
+            % Correct symmetric branch
             x = 4 * r * (1 - x) * (x - 0.5);
         end
         
-        % Zabezpieczenie modulo (na wypadek błędów numerycznych)
+        % Modulo protection
         if x > 1 || x < 0, x = mod(x, 1); end
         
-        % Zapis do zmiennej tymczasowej
+        % Save to temporary variable
         if k > n_discard
             temp_bifur_col(k - n_discard) = x;
         end
     end
     
-    % PRZYPISANIE CAŁEJ KOLUMNY (To naprawia błąd parfor)
+    % ASSIGNMENT OF WHOLE COLUMN
     bifur_5(:, i) = temp_bifur_col;
     
-    % 2. Obliczanie LLE
+    % 2. Calculating LLE
     x = 0.1; 
     sum_L = 0;
     for k = 1:n_iter_lle + n_discard
-        % Wzór
+        % Formula
         if x < 0.5
             xn = 4 * r * x * (0.5 - x);
-            deriv = 4 * r * (0.5 - 2*x); % Pochodna lewej strony
+            deriv = 4 * r * (0.5 - 2*x); % Derivative of left side
         else
             xn = 4 * r * (1 - x) * (x - 0.5);
-            deriv = 4 * r * (1.5 - 2*x); % Pochodna prawej strony
+            deriv = 4 * r * (1.5 - 2*x); % Derivative of right side
         end
         
         if xn > 1 || xn < 0, xn = mod(xn, 1); end
@@ -279,7 +275,7 @@ lle_6 = zeros(2, res_x);
 
 parfor i = 1:res_x
     a = a_vals(i);
-    % Bifurkacja (b=30)
+    % Bifurcation (b=30)
     x = 0.2; y = 0.3;
     for k = 1:n_discard
         d=y; if abs(d)<1e-10, d=1e-10; end
@@ -310,7 +306,6 @@ parfor i = 1:res_x
     lle_6(:, i) = [s1/n_iter_lle; s2/n_iter_lle];
 end
 
-% Manualny zapis 2D-HM
 f=figure('Visible','off', 'Position', [0 0 1000 600]);
 plot(a_vals, bifur_6, 'k.', 'MarkerSize', 0.1); 
 title('Diagram Bifurkacyjny - Nowy dwuwymiarowy układ hiperchaotyczny');
@@ -363,9 +358,9 @@ save_plots(7, k_vals, bifur_7, lle_7, '7_Chirikov', 'k', 'Ulepszone odwzorowanie
 fprintf('\n=== ZAKOŃCZONO. WSZYSTKIE PLIKI ZAPISANE (B&W). ===\n');
 
 
-%% --- FUNKCJA ZAPISUJĄCA ---
+%% --- SAVING FUNCTION ---
 function save_plots(idx, x_vals, bifur_data, lle, fname, x_lab, title_main, y_lims)
-    % Diagram Bifurkacyjny (SCATTER PLOT)
+    % Bifurcation Diagram (SCATTER PLOT)
     f = figure('Visible','off', 'Position', [0 0 1000 600]);
     plot(x_vals, bifur_data, 'k.', 'MarkerSize', 0.1);
     title(['Diagram Bifurkacyjny - ' title_main]); 
@@ -376,7 +371,7 @@ function save_plots(idx, x_vals, bifur_data, lle, fname, x_lab, title_main, y_li
     saveas(f, [fname '_bifurkacyjny.png']); 
     close(f);
     
-    % LLE (Standardowy wykres liniowy)
+    % LLE (Standard line plot)
     f = figure('Visible','off', 'Position', [0 0 1000 400]);
     plot(x_vals, lle, 'b-', 'LineWidth', 1.2);
     hold on;

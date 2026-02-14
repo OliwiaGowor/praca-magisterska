@@ -1,6 +1,5 @@
 function [t_enc, t_dec, C1, C2, PT] = algo_chaos_map_matlab(data)
     % ALGO_CHAOS_MAP_MATLAB Benchmark for 3D Logistic + Improved Chirikov Map
-    % Implementation based on the provided main logic.
     
     % 1. Input data retrieval
     img_orig = data.img_orig; 
@@ -10,29 +9,29 @@ function [t_enc, t_dec, C1, C2, PT] = algo_chaos_map_matlab(data)
     num_pixels = rows * cols;
     
     % 2. Key generation and chaotic sequence (3D Logistic Map)
-    % Parameters from main.m (or random within stability range)
+    % Parameters from main.m
     % Key for Chirikov (x, y, k, h)
     key_chirikov = rand(1, 4) * 10; 
     
     % 3. ENCRYPTION Benchmark
     tic;
-    % Phase 1: Sequence Generation and Diffusion (Logistic Map)
+    % Sequence Generation and Diffusion (Logistic Map)
     [diffused_img, chaotic_seqs] = logistic_diffusion_encrypt(img_orig, num_pixels);
     
-    % Phase 2: Confusion (Chirikov Map - external function)
+    % Confusion (Chirikov Map - external function)
     [ct1, ~] = encrypt(diffused_img, key_chirikov);
     t_enc = toc;
     
-    % Encrypt modified image (for metrics)
+    % Encrypt modified image for metrics
     [diffused_mod, ~] = logistic_diffusion_encrypt(img_mod, num_pixels);
     [ct2, ~] = encrypt(diffused_mod, key_chirikov);
     
     % 4. DECRYPTION Benchmark
     tic;
-    % Phase 1: Inverse Confusion (Inverse Chirikov)
+    % Inverse Confusion (Inverse Chirikov)
     dec_chirikov = decrypt(ct1, key_chirikov);
     
-    % Phase 2: Inverse Diffusion (Inverse Logistic Map)
+    % Inverse Diffusion (Inverse Logistic Map)
     PT = logistic_diffusion_decrypt(dec_chirikov, chaotic_seqs, sz);
     t_dec = toc;
     
@@ -41,18 +40,17 @@ function [t_enc, t_dec, C1, C2, PT] = algo_chaos_map_matlab(data)
     C2 = ct2;
 end
 
-%% --- Helper Functions (Logic extracted from main.m) ---
+%% --- Helper Functions ---
 
 function [out_img, seqs] = logistic_diffusion_encrypt(img, N)
     % Generates sequences and applies diffusion according to main.m
     
-    % Start parameters (from main.m)
+    % Start parameters
     x = zeros(1, N+1); y = zeros(1, N+1); z = zeros(1, N+1);
     x(1)=0.2350; y(1)=0.3500; z(1)=0.7350;
     a=0.0125; b=0.0157; l=3.7700;
     
-    % Generate chaotic sequence (Slowest part in MATLAB)
-    % Optimization: Loop is necessary due to recursive dependency
+    % Generate chaotic sequence
     for i=1:N
         x(i+1) = l*x(i)*(1-x(i)) + b*y(i)*y(i)*x(i) + a*z(i)*z(i)*z(i);
         y(i+1) = l*y(i)*(1-y(i)) + b*z(i)*z(i)*y(i) + a*x(i)*x(i)*x(i);
@@ -72,9 +70,7 @@ function [out_img, seqs] = logistic_diffusion_encrypt(img, N)
     
     seqs.Sx = Sx; seqs.Sy = Sy; seqs.Sz = Sz;
 
-    % Pixel operations (from main.m: multiply -> uint8 -> XOR)
-    % Note: Original code performs uint8(double * uint8) conversion which causes data loss.
-    % We implement exactly as in the source logic.
+    % Pixel operations
     
     [r, c, ch] = size(img);
     if ch >= 3
@@ -113,12 +109,12 @@ function out_img = logistic_diffusion_decrypt(img, seqs, sz)
         DG = reshape(img(:,:,2), 1, []);
         DB = reshape(img(:,:,3), 1, []);
         
-        % XOR (Odwrotność XOR to XOR)
+        % XOR
         DDR = bitxor(seqs.Sx, uint8(DR));
         DDG = bitxor(seqs.Sy, uint8(DG));
         DDB = bitxor(seqs.Sz, uint8(DB));
         
-        % Odwrócenie mnożenia
+        % Reverse multiplication
         DDDR = xi .* double(DDR);
         DDDG = yi .* double(DDG);
         DDDB = zi .* double(DDB);

@@ -2,7 +2,6 @@ function [t_enc, t_dec, C1, C2, PT] = algo_chaos_matlab(data)
     % Circular Chaotic Map (Pure MATLAB)
     
     % Extract data before tic
-    % Accessing structure fields like data.img_orig inside tic can skew timing
     input_orig = data.img_orig;
     input_mod  = data.img_mod;
     

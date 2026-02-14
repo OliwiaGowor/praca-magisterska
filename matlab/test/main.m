@@ -1,4 +1,4 @@
-% === main.m: Main driver (NO WARM-UP) ===
+% === main.m: Main driver ===
 clear; clc; close all;
 
 % --- Path configuration ---
@@ -18,8 +18,8 @@ addpath(fullfile(currentPath, 'images'));
 
 % --- Test configuration ---
 config.N_RUNS = 1;
-run_attacks = true; % Set to false to skip (computationally intensive)
-should_run_benchmarks = false; % Set to false to skip (computationally intensive)
+run_attacks = true; % Set to false to skip
+should_run_benchmarks = false; % Set to false to skip
 
 % List of algorithm titles
 config.titles = { ...
@@ -44,17 +44,13 @@ config.titles = { ...
 
 fprintf('=== START TESTÓW (Przebiegi: %d) ===\n', config.N_RUNS);
 
-% 1. Data preparation
 [data] = setup_test_data();
 
 if should_run_benchmarks
-    % 2. Run benchmarks
     raw_results = run_benchmarks(data, config);
 
-    % 3. Process and save results
     avg_results = process_results(raw_results, data, config);
 
-    % 4. Visualization
     visualize_results(avg_results, raw_results, data, config);
 
 end

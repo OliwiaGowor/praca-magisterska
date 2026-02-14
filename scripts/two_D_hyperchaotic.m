@@ -1,18 +1,22 @@
-%% Parametry i inicjalizacja
-clear; clc; close all; % close all zamyka poprzednie okna
+% =========================================================================
+% Title: New 2D Hyperchaotic System Analysis
+% Description: Generates bifurcation diagram and Lyapunov exponents.
+% =========================================================================
+clear; clc; close all;
+
+%% 1. Parameter Configuration
 a_range = linspace(0, 60, 600); 
-b = 30;                          
+b = 30;                         
 x0 = 0.2;                        
 y0 = 0.3;
-n_transient = 200;               
-n_iter = 400;                    
+n_transient = 200;                
+n_iter = 400;                     
 
 LE1 = zeros(size(a_range));
 LE2 = zeros(size(a_range));
 sys_title = 'Nowy dwuwymiarowy układ hiperchaotyczny';
 
-%% 1. Generowanie i zapisywanie Diagramu Bifurkacyjnego
-% Tworzymy osobne okno dla pierwszego wykresu
+%% 2. Generating and Saving Bifurcation Diagram
 fig1 = figure('Name', 'Bifurkacja', 'Position', [100, 100, 800, 500]);
 hold on;
 
@@ -20,13 +24,15 @@ disp('Generowanie diagramu bifurkacyjnego...');
 for i = 1:length(a_range)
     a = a_range(i);
     x = x0; y = y0;
-    % Iteracje przejściowe
+    
+    % Transient iterations
     for n = 1:n_transient
         x_next = sin(a*pi*x + b*y)^2;
         y_next = cos(b*pi/y + a*x)^2;
         x = x_next; y = y_next;
     end
-    % Zbieranie danych
+    
+    % Data collection
     x_data = zeros(1, n_iter);
     for n = 1:n_iter
         x_next = sin(a*pi*x + b*y)^2;
@@ -42,13 +48,11 @@ xlabel('a'); ylabel('x');
 xlim([0 60]); ylim([0 1]);
 grid on;
 
-% ZAPIS DIAGRAMU BIFURKACYJNEGO
+% Saving bifurcation diagram
 saveas(fig1, 'diagram_bifurkacyjny.png');
 disp('Zapisano: diagram_bifurkacyjny.png');
 
-
-%% 2. Obliczanie i zapisywanie Wykładników Lapunowa
-% Tworzymy osobne okno dla drugiego wykresu
+%% 3. Calculating and Saving Lyapunov Exponents
 fig2 = figure('Name', 'Wykladniki Lapunowa', 'Position', [150, 150, 800, 500]);
 
 disp('Obliczanie wykładników Lapunowa...');
@@ -62,6 +66,7 @@ for i = 1:length(a_range)
         x_next = sin(a*pi*x + b*y)^2;
         y_next = cos(b*pi/y + a*x)^2;
         
+        % Jacobian matrix calculation
         J11 = 2*sin(a*pi*x + b*y)*cos(a*pi*x + b*y)*(a*pi);
         J12 = 2*sin(a*pi*x + b*y)*cos(a*pi*x + b*y)*(b);
         J21 = 2*cos(b*pi/y + a*x)*(-sin(b*pi/y + a*x))*(a);
@@ -87,21 +92,18 @@ legend('LE_1', 'LE_2', 'Location', 'southeast');
 grid on;
 xlim([0 60]);
 
-% ZAPIS WYKRESU LAPUNOWA
+% Saving Lyapunov plot
 saveas(fig2, 'wykladniki_lapunowa.png');
 disp('Zapisano: wykladniki_lapunowa.png');
 
+%% 4. Saving Numerical Data
 
-%% 3. ZAPISYWANIE DANYCH LICZBOWYCH
-
-% Przygotowanie tabeli z wynikami LE
+% Preparing LE results table
 resultsTable = table(a_range', LE1', LE2', ...
     'VariableNames', {'Parametr_a', 'LE1', 'LE2'});
 
-% Zapis do pliku CSV
+% Saving data to files (added to match the print statement)
 writetable(resultsTable, 'dane_lapunowa.csv');
-
-% Zapis wszystkich zmiennych do .mat
-save('pelne_dane_systemu.mat');
+save('pelne_dane_systemu.mat', 'a_range', 'LE1', 'LE2', 'b', 'x0', 'y0');
 
 fprintf('\nZakończono sukcesem!\nUtworzono pliki graficzne:\n - diagram_bifurkacyjny.png\n - wykladniki_lapunowa.png\nOraz pliki danych:\n - dane_lapunowa.csv\n - pelne_dane_systemu.mat\n');

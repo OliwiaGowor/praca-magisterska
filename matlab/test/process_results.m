@@ -1,7 +1,7 @@
 function avg = process_results(raw, data, config)
-    % PROCESS_RESULTS - Zapisuje wyniki (w tym ORYGINAŁ w CSV)
+    % PROCESS_RESULTS - Saves results
     
-    % Średnie
+    % Averages
     avg.times_enc = mean(raw.times_enc, 2, 'omitnan');
     avg.times_dec = mean(raw.times_dec, 2, 'omitnan');
     avg.entropy   = mean(raw.entropy, 2, 'omitnan');
@@ -19,12 +19,12 @@ function avg = process_results(raw, data, config)
     
     save(sprintf('results/full_results_%s_%s.mat', fname_only, timestamp), 'avg', 'raw', 'config');
 
-    % --- CSV GŁÓWNY ---
+    % --- MAIN CSV ---
     f_main = sprintf('results/main_metrics_%s_%s.csv', fname_only, timestamp);
     fid = fopen(f_main, 'w');
     fprintf(fid, 'Plik,Algorytm,Przebieg,Czas_Szyfr,Czas_Deszyfr,Entropia,Kor_Poz,Kor_Pion,Kor_Diag,Kor_Srednia\n');
     
-    % 1. Wiersz z ORYGINAŁEM
+    % 1. Row with ORIGINAL
     if isfield(data, 'stats')
         e_orig = data.stats.entropy;
         c_h = data.stats.corr(1); c_v = data.stats.corr(2); c_d = data.stats.corr(3);
@@ -33,7 +33,7 @@ function avg = process_results(raw, data, config)
             data.filename, e_orig, c_h, c_v, c_d, c_avg);
     end
     
-    % 2. Wiersze z ALGORYTMAMI
+    % 2. Rows with ALGORITHMS
     [num_algos, num_runs] = size(raw.times_enc);
     for i=1:num_algos
         safe_name = strrep(config.titles{i}, ',', ';');
@@ -47,7 +47,7 @@ function avg = process_results(raw, data, config)
     end
     fclose(fid);
     
-    % --- CSV WRAŻLIWOŚĆ ---
+    % --- SENSITIVITY CSV ---
     f_sens = sprintf('results/npcr_uaci_analysis_%s_%s.csv', fname_only, timestamp);
     fid = fopen(f_sens, 'w');
     fprintf(fid, 'Plik,Algorytm,Przebieg,NPCR_Poczatek,UACI_Poczatek,NPCR_Srodek,UACI_Srodek,NPCR_Koniec,UACI_Koniec\n');

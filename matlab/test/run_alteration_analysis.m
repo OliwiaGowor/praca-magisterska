@@ -1,7 +1,7 @@
 function run_alteration_analysis(data)
     % RUN_ALTERATION_ANALYSIS Comprehensive Alteration Attack Analysis.
     %
-    % Tests robustness of 15 algorithms (matching main.m order).
+    % Tests robustness of algorithms (matching main.m order).
     % Saves results to CSV, MAT, and PNG files.
     
     timestamp = datestr(now, 'yyyymmdd_HHMMSS');
@@ -159,7 +159,6 @@ function run_alteration_analysis(data)
             for i = 1:length(intensities)
                 inte = intensities(i);
                 
-                % --- MODYFIKACJA: Ataki w LEWYM GÓRNYM ROGU (1,1) ---
                 if strcmp(att_type, 'tamper') || strcmp(att_type, 'contiguous_crop')
                     C_prim = C_base;
                     
@@ -168,40 +167,32 @@ function run_alteration_analysis(data)
                     affected_pixels = round(total_pixels * inte);
                     
                     if isvector(C_prim)
-                        % Wektor: Zmieniamy początek (indeks 1)
                         end_idx = min(total_pixels, affected_pixels);
                         
                         if strcmp(att_type, 'tamper')
                             img_t_flat = img_tamper(:);
-                            % Zabezpieczenie na wypadek gdyby img_tamper był mniejszy
                             len_to_copy = min(numel(img_t_flat), end_idx);
                             C_prim(1:len_to_copy) = img_t_flat(1:len_to_copy);
                         else
-                            % Contiguous Crop -> Wyzeruj początek
                             C_prim(1:end_idx) = 0;
                         end
                     else
-                        % Macierz 2D: Kwadrat w lewym górnym rogu
                         block_side = round(sqrt(affected_pixels));
                         [rows, cols] = size(C_prim);
                         
-                        % Ustal granice bloku w rogu (1,1)
                         r_end = min(rows, block_side);
                         c_end = min(cols, block_side);
                         
                         if strcmp(att_type, 'tamper')
                             C_prim(1:r_end, 1:c_end) = img_tamper(1:r_end, 1:c_end);
                         else
-                            % Contiguous Crop -> Wyzeruj blok w rogu
                             C_prim(1:r_end, 1:c_end) = 0;
                         end
                     end
                 else
-                    % Pozostałe ataki (szum, losowe wycinanie) obsługiwane standardowo
                     C_prim = apply_attack(C_base, att_type, inte, img_tamper);
                 end
                 
-                % Wyciszanie ostrzeżeń
                 w_state = warning('off', 'all'); 
                 try
                     P_prim = decrypt_fn(C_prim);
@@ -413,7 +404,6 @@ function plot_alteration_results(results, algos, attack_configs, save_dir, times
     num_attacks = size(attack_configs, 1);
     num_metrics = 3;
 
-    % --- PALETA (15 kolorów) ---
     colors = [
         0.0000, 0.0000, 0.0000; % #000000
         0.0000, 0.1176, 0.6392; % #001ea3

@@ -1,7 +1,6 @@
 function data = setup_test_data()
-    % SETUP_TEST_DATA - Przygotowuje obrazy (Oryginał + 3 Modyfikacje) + Statystyki
+    % SETUP_TEST_DATA - Prepares images (Original + 3 Modifications) + Statistics
     
-    % --- Konfiguracja ścieżki do pliku ---
     target_file = 'images/4.2.03.tiff'; 
     
     if exist(target_file, 'file')
@@ -13,7 +12,7 @@ function data = setup_test_data()
         img_orig = imread(filename);
     end
     
-    % Konwersja na GrayScale (wymuszenie 2D)
+    % Conversion to GrayScale (forcing 2D)
     if size(img_orig, 3) == 3
         img_orig = rgb2gray(img_orig);
         fprintf('Info: Konwersja RGB -> Gray dla "%s".\n', filename);
@@ -22,24 +21,23 @@ function data = setup_test_data()
     [rows, cols] = size(img_orig);
     num_pixels = rows * cols;
     
-    % --- Generowanie 3 wersji modyfikacji (dla analizy wrażliwości) ---
+    % --- Generating 3 modification versions (for sensitivity analysis) ---
     
-    % 1. Start (Pierwszy piksel)
+    % 1. Start (First pixel)
     img_mod_start = img_orig;
     img_mod_start(1) = bitxor(img_mod_start(1), 1);
     
-    % 2. Mid (Środkowy piksel)
+    % 2. Mid (Middle pixel)
     img_mod_mid = img_orig;
     mid_idx = ceil(num_pixels / 2);
     img_mod_mid(mid_idx) = bitxor(img_mod_mid(mid_idx), 1);
     
-    % 3. End (Ostatni piksel)
+    % 3. End (Last pixel)
     img_mod_end = img_orig;
     img_mod_end(end) = bitxor(img_mod_end(end), 1);
     
-    % --- OBLICZANIE STATYSTYK ORYGINAŁU (Tego brakowało) ---
+    % --- CALCULATING ORIGINAL STATISTICS ---
     try
-        % Zakładamy, że funkcje metryk są w ścieżce (dodane w main.m)
         entropy_orig = calculate_entropy(img_orig);
         [ch, cv, cd] = calculate_correlation(img_orig);
     catch ME
@@ -48,17 +46,17 @@ function data = setup_test_data()
         ch = 0; cv = 0; cd = 0;
     end
     
-    % --- Pakowanie danych do struktury ---
+    % --- Packing data into structure ---
     data.img_orig = img_orig;
     data.size     = size(img_orig);
     data.filename = filename;
     data.img_flat = img_orig(:)';
     
-    % Statystyki oryginału
+    % Original statistics
     data.stats.entropy = entropy_orig;
     data.stats.corr    = [ch, cv, cd];
     
-    % Wersje zmodyfikowane (Macierze i Płaskie)
+    % Modified versions (Matrices and Flat)
     data.img_mod_start = img_mod_start;
     data.img_flat_mod_start = img_mod_start(:)';
     
@@ -68,7 +66,6 @@ function data = setup_test_data()
     data.img_mod_end = img_mod_end;
     data.img_flat_mod_end = img_mod_end(:)';
     
-    % Domyślne pola (dla kompatybilności wstecznej z resztą kodu)
-    data.img_mod = img_mod_mid;       % Domyślnie bierzemy środkowy do wykresów
+    data.img_mod = img_mod_mid;
     data.img_flat_mod = img_mod_mid(:)';
 end

@@ -1,8 +1,7 @@
 function [t_enc, t_dec, C1, C2, PT] = algo_hyperchaotic_adaptive(data)
-    % ALGO_HYPERCHAOTIC_ADAPTIVE Adapter dla algorytmu 2D-RA + Adaptive Diffusion
-    % Łączy framework testowy z modularną implementacją algorytmu.
+    % ALGO_HYPERCHAOTIC_ADAPTIVE Adapter for 2D-RA algorithm + Adaptive Diffusion
     
-    % Dodanie ścieżki do modułów algorytmu
+    % Adding path to algorithm modules
     currentPath = fileparts(mfilename('fullpath'));
     algoPath = fullfile(currentPath, 'hyperchaotic_adaptive');
     addpath(algoPath);
@@ -11,26 +10,21 @@ function [t_enc, t_dec, C1, C2, PT] = algo_hyperchaotic_adaptive(data)
     img_mod = data.img_mod;
     sz = data.size;
     
-    %% --- SZYFROWANIE (Oryginał) ---
     tic;
-    % 1. Generowanie klucza i sekwencji (zależne od hash obrazu)
+    % 1. Key and sequence generation (dependent on image hash)
     [seq_enc, params_enc] = hc_key_gen(img_orig);
     
-    % 2. Właściwe szyfrowanie
+    % 2. Encryption
     C1 = hc_encrypt(img_orig, seq_enc);
     t_enc = toc;
     
-    %% --- SZYFROWANIE (Zmodyfikowany - test NPCR) ---
-    % Algorytm "One-Time Pad" zależny od hasha. Dla img_mod generujemy nowy klucz.
+    %% --- Encryption for metrics ---
     [seq_mod, ~] = hc_key_gen(img_mod);
     C2 = hc_encrypt(img_mod, seq_mod);
     
-    %% --- DESZYFROWANIE ---
+    %% --- Decryption ---
     tic;
-    % Deszyfrowanie C1 przy użyciu sekwencji z img_orig
     PT = hc_decrypt(C1, seq_enc, sz);
     t_dec = toc;
     
-    % Opcjonalnie: posprzątaj ścieżkę (jeśli to konieczne)
-    % rmpath(algoPath); 
 end

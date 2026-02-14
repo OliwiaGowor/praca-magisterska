@@ -1,17 +1,17 @@
 % =========================================================================
-% Tytuł: Chaotyczne odwzorowanie 2D-RA (Rastrigin-Ackley) - Diagram Bifurkacyjny
-% Opis: Generuje klasyczny diagram bifurkacyjny oraz analizę LE ze sztywną skalą.
+% Title: Chaotic Map 2D-RA (Rastrigin-Ackley) - Bifurcation Diagram
+% Description: Generates a classical bifurcation diagram and LE analysis with rigid scale.
 % =========================================================================
 clear; clc; close all;
 
-%% 1. Konfiguracja parametrów
+%% 1. Parameter Configuration
 bias = 1e8;             
 beta = 1;               
 Euler = exp(1);         
 x_init = 0.5;           
 y_init = 0.5;           
 
-% Ustawienia symulacji
+% Simulation settings
 alpha_min = 0;
 alpha_max = 100;        
 d_alpha = 0.1;          
@@ -21,14 +21,14 @@ n_transient = 1000;
 n_collect = 300;        
 total_iter = n_transient + n_collect;
 
-% Przygotowanie kontenerów
+% Container preparation
 LE_results = zeros(length(alpha_values), 2);
 Bif_X = zeros(1, length(alpha_values) * n_collect);
 Bif_A = zeros(1, length(alpha_values) * n_collect);
 
 fprintf('Obliczanie... Trwa generowanie danych dla alpha [0, 100].\n');
 
-%% 2. Główna pętla obliczeniowa
+%% 2. Main computational loop
 idx_bif = 1;
 for k = 1:length(alpha_values)
     alpha = alpha_values(k);
@@ -60,7 +60,7 @@ for k = 1:length(alpha_values)
         [Q, R] = qr(J * Q);
         L_sum = L_sum + log(abs(diag(R)));
         
-        % Iteracja układu
+        % System iteration
         x_next = mod(x^2 - K1*cos(2*pi*x) - K2*exp1, 1);
         y_next = mod(y^2 - K1*cos(2*pi*y) - 20*K2*exp2 + Euler, 1);
         x = x_next; y = y_next;
@@ -74,7 +74,7 @@ for k = 1:length(alpha_values)
     LE_results(k, :) = L_sum / total_iter;
 end
 
-%% 3. Rysowanie Diagramu Bifurkacyjnego
+%% 3. Plotting Bifurcation Diagram
 h_bif = figure('Name', 'Diagram Bifurkacyjny', 'Color', 'w', 'Position', [100, 100, 1000, 600]);
 plot(Bif_A, Bif_X, 'k.', 'MarkerSize', 0.5); 
 xlabel('\alpha'); ylabel('x');
@@ -82,11 +82,11 @@ title('Diagram Bifurkacyjny - Chaotyczne odwzorowanie 2D-RA');
 xlim([alpha_min, alpha_max]); ylim([0, 1]);
 grid on;
 
-% Zapis diagramu bifurkacyjnego
+% Saving bifurcation diagram
 exportgraphics(h_bif, 'Bifurkacja_2D_RA.png', 'Resolution', 300);
 fprintf('Zapisano: Bifurkacja_2D_RA.png\n');
 
-%% 4. Rysowanie Wykładników Lapunowa (Zadana skala 18-24)
+%% 4. Plotting Lyapunov Exponents (Set scale 18-24)
 h_le = figure('Name', 'Wykładniki Lapunowa', 'Color', 'w', 'Position', [100, 100, 1000, 450]);
 hold on;
 
@@ -100,7 +100,7 @@ title('Wykładniki Lapunowa - Chaotyczne odwzorowanie 2D-RA');
 legend('Location', 'northeast');
 grid on; box on;
 
-% Zapis wykładników Lapunowa
+% Saving Lyapunov exponents
 exportgraphics(h_le, 'Lapunov_2D_RA.png', 'Resolution', 300);
 fprintf('Zapisano: Lapunov_2D_RA.png\n');
 

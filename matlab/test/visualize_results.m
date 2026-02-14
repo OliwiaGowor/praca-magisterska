@@ -1,15 +1,14 @@
 function visualize_results(avg, raw, data, config)
-    % VISUALIZE_RESULTS - Generuje pełny zestaw wizualizacji:
-    % 1. Wykres słupkowy czasu
-    % 2. Tabela Główna (z wierszem Oryginału)
-    % 3. Tabela Wrażliwości (NPCR/UACI)
-    % 4. Dwie galerie wizualne (Klasyczna i Chaotyczna - duże zdjęcia)
+    % VISUALIZE_RESULTS - Generates a full set of visualizations:
+    % 1. Time bar chart
+    % 2. Main Table 
+    % 3. Sensitivity Table (NPCR/UACI)
+    % 4. Two visual galleries
     
     titles = config.titles;
     num_algos = length(titles);
     timestamp = datestr(now, 'yyyy-mm-dd_HH-MM-SS');
     
-    % Obsługa nazwy pliku
     if isfield(data, 'filename')
         [~, fname_only, ~] = fileparts(data.filename);
         full_filename = data.filename;
@@ -25,7 +24,7 @@ function visualize_results(avg, raw, data, config)
     disp('Generowanie wizualizacji...');
 
     %% ============================================================
-    %% 1. WYKRES (BAR CHART)
+    %% 1. CHART (BAR CHART)
     %% ============================================================
     hFigChart = figure('Name', 'Wykres Czasu', 'NumberTitle', 'off', ...
                        'Position', [50, 50, 1600, 900], 'Color', 'w', 'Visible', 'on');
@@ -60,7 +59,7 @@ function visualize_results(avg, raw, data, config)
     saveas(hFigChart, file_chart);
 
     %% ============================================================
-    %% 2. TABELA 1: GŁÓWNA
+    %% 2. TABLE 1: MAIN
     %% ============================================================
     fig_height = max(400, 35*(num_algos+1) + 100);
     f1 = figure('Name', 'Glowne Metryki', 'Position', [50, 50, 1600, fig_height], ...
@@ -73,7 +72,7 @@ function visualize_results(avg, raw, data, config)
     colNames = {'Algorytm', 'Czas Szyfr. [s]', 'Czas Deszyfr. [s]', 'Entropia', 'Kor. Poz.', 'Kor. Pion.', 'Kor. Diag.', 'Kor. Śr.'};
     dat1 = cell(num_algos + 1, 8);
     
-    % Wiersz Oryginału
+    % Original Row
     if isfield(data, 'stats')
         c_avg = mean([data.stats.corr(1), data.stats.corr(2), data.stats.corr(3)]);
         dat1(1,:) = {'>>> OBRAZ ORYGINALNY <<<', '-', '-', sprintf('%.5f', data.stats.entropy), ...
@@ -87,8 +86,8 @@ function visualize_results(avg, raw, data, config)
         if i > length(avg.times_enc), continue; end
         c_avg_algo = mean([avg.corr_h(i), avg.corr_v(i), avg.corr_d(i)], 'omitnan');
         dat1(i+1,:) = {titles{i}, sprintf('%.6f', avg.times_enc(i)), sprintf('%.6f', avg.times_dec(i)), ...
-                     sprintf('%.5f', avg.entropy(i)), sprintf('%.5f', avg.corr_h(i)), ...
-                     sprintf('%.5f', avg.corr_v(i)), sprintf('%.5f', avg.corr_d(i)), sprintf('%.5f', c_avg_algo)};
+                      sprintf('%.5f', avg.entropy(i)), sprintf('%.5f', avg.corr_h(i)), ...
+                      sprintf('%.5f', avg.corr_v(i)), sprintf('%.5f', avg.corr_d(i)), sprintf('%.5f', c_avg_algo)};
     end
     
     uitable('Parent', f1, 'Data', dat1, 'ColumnName', colNames, ...
@@ -100,7 +99,7 @@ function visualize_results(avg, raw, data, config)
     imwrite(frame1.cdata, file_table_main);
 
     %% ============================================================
-    %% 3. TABELA 2: WRAŻLIWOŚĆ
+    %% 3. TABLE 2: SENSITIVITY
     %% ============================================================
     f2 = figure('Name', 'Analiza Wrazliwosci', 'Position', [100, 100, 1800, max(400, 35*num_algos+100)], ...
                 'Color', 'w', 'Visible', 'on', 'MenuBar', 'none');
@@ -122,16 +121,16 @@ function visualize_results(avg, raw, data, config)
     imwrite(frame2.cdata, file_table_sens);
 
     %% ============================================================
-    %% 4. GALERIE WIZUALNE (DZIELONE NA KLASYCZNE I CHAOTYCZNE)
+    %% 4. VISUAL GALLERIES
     %% ============================================================
     
-    % Kategoryzacja algorytmów
+    % Algorithm categorization
     classic_idxs = [];
     chaos_idxs = [];
     
     for i = 1:num_algos
         t_lower = lower(titles{i});
-        % Jeśli nazwa zawiera klasyczne słowa kluczowe
+        % If name contains classic keywords
         if contains(t_lower, 'des') || contains(t_lower, 'aes') || ...
            contains(t_lower, 'blowfish') || contains(t_lower, 'chacha')
             classic_idxs(end+1) = i;
@@ -140,17 +139,17 @@ function visualize_results(avg, raw, data, config)
         end
     end
     
-    % Helper do generowania galerii
+    % Helper for gallery generation
     generate_gallery(classic_idxs, 'KLASYCZNE', 'visuals_classic', raw, titles, data, resultsFolder, fname_only, timestamp);
     generate_gallery(chaos_idxs, 'CHAOTYCZNE', 'visuals_chaos', raw, titles, data, resultsFolder, fname_only, timestamp);
 
     %% ============================================================
-    %% PODSUMOWANIE
+    %% SUMMARY
     %% ============================================================
     fprintf('--------------------------------------------------\n');
     fprintf(' Wygenerowano raporty dla pliku: %s\n', full_filename);
-    fprintf(' Wykres:        %s\n', file_chart);
-    fprintf(' Tabele:        %s, %s\n', file_table_main, file_table_sens);
+    fprintf(' Wykres:         %s\n', file_chart);
+    fprintf(' Tabele:         %s, %s\n', file_table_main, file_table_sens);
     fprintf(' Galeria Klas.: %s\n', fullfile(resultsFolder, sprintf('visuals_classic_%s_%s.png', fname_only, timestamp)));
     fprintf(' Galeria Chaos: %s\n', fullfile(resultsFolder, sprintf('visuals_chaos_%s_%s.png', fname_only, timestamp)));
     fprintf('--------------------------------------------------\n');
@@ -159,18 +158,16 @@ end
 function generate_gallery(indices, label, prefix, raw, titles, data, folder, fname, ts)
     if isempty(indices), return; end
     
-    % Konfiguracja: 2 kolumny (Encrypted | Decrypted) -> Duże zdjęcia
     cols = 2; 
-    % Wiersze: 1 na oryginał + 1 na każdy algorytm
+
     rows_count = length(indices) + 1;
     
-    % Wysokość figury skalowana liczbą wierszy (min 500px, max monitora)
     fig_h = max(400, 300 * rows_count);
     
     hFig = figure('Name', ['Galeria ' label], 'NumberTitle', 'off', ...
                   'Position', [50, 50, 1200, fig_h], 'Color', 'w', 'Visible', 'on');
     
-    % --- Wiersz 1: Oryginał i Zmodyfikowany ---
+    % --- Row 1: Original and Modified ---
     subplot(rows_count, cols, 1);
     if isfield(data, 'img_orig'), imshow(data.img_orig); end
     title('Oryginał', 'FontSize', 12, 'FontWeight', 'bold');
@@ -179,19 +176,19 @@ function generate_gallery(indices, label, prefix, raw, titles, data, folder, fna
     if isfield(data, 'img_mod'), imshow(data.img_mod); end
     title('Zmodyfikowany (dla testów wrażliwości)', 'FontSize', 10);
     
-    % --- Kolejne wiersze: Algorytmy ---
+    % --- Subsequent rows: Algorithms ---
     for k = 1:length(indices)
         algo_idx = indices(k);
         current_row = k + 1;
         
-        % Kolumna 1: Szyfrogram
+        % Column 1: Ciphertext
         subplot(rows_count, cols, (current_row-1)*cols + 1);
         if ~isempty(raw.images_enc{algo_idx})
             imshow(raw.images_enc{algo_idx});
         end
         title(sprintf('%s (Enc)', titles{algo_idx}), 'Interpreter', 'none', 'FontSize', 11, 'FontWeight', 'bold');
         
-        % Kolumna 2: Odszyfrowany
+        % Column 2: Decrypted
         subplot(rows_count, cols, (current_row-1)*cols + 2);
         if ~isempty(raw.images_dec{algo_idx})
             imshow(raw.images_dec{algo_idx});

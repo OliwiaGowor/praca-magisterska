@@ -1,13 +1,12 @@
 function res = run_benchmarks(data, config)
-    % RUN_BENCHMARKS - Wykonuje testy (W tym 3-punktowy test wrażliwości)
+    % RUN_BENCHMARKS - Executes benchmarks
     
     N = config.N_RUNS;
     num_algos = length(config.titles);
     
     res = init_results_struct(num_algos, N);
     
-    % Lista funkcji wrapperów dla algorytmów (kolejność musi pasować do config.titles)
-    % Uwaga: Musisz upewnić się, że kolejność tutaj odpowiada main.m!
+    % List of wrapper functions for algorithms (order must match config.titles)
     algos = {
         @algo_des_c, ...
         @algo_aes_c, ...
@@ -24,12 +23,12 @@ function res = run_benchmarks(data, config)
         @algo_hyperchaotic_2d_matlab, ...
         @algo_hu_tian, ...
         @algo_hyperchaotic_adaptive, ...
-        @algo_aes_pixel, ...  % <-- DODAJ TU
-        @algo_des_pixel, ...  % <-- DODAJ TU
+        @algo_aes_pixel, ...  % <-- ADD HERE
+        @algo_des_pixel, ...  % <-- ADD HERE
     };
     
     for run_idx = 1:N
-        fprintf('--- Przebieg %d / %d ---\n', run_idx, N);
+        fprintf('--- Run %d / %d ---\n', run_idx, N);
         
         for i = 1:length(algos)
             algo_func = algos{i};
@@ -46,7 +45,7 @@ function res = run_benchmarks(data, config)
                 d_mid = data; 
                 d_mid.img_mod = data.img_mod_mid; 
                 d_mid.img_flat_mod = data.img_flat_mod_mid;
-                [t2, t_dec, C1_mid, C2_mid, PT] = algo_func(d_mid); % Tu pobieramy też t_dec i PT
+                [t2, t_dec, C1_mid, C2_mid, PT] = algo_func(d_mid); % Here we also retrieve t_dec and PT
                 
                 % --- 3. Test "End" (Pixel End) ---
                 d_end = data; 
@@ -54,20 +53,20 @@ function res = run_benchmarks(data, config)
                 d_end.img_flat_mod = data.img_flat_mod_end;
                 [t3, ~, C1_end, C2_end, ~] = algo_func(d_end);
                 
-                % --- Obliczanie Metryk ---
+                % --- Calculating Metrics ---
                 
-                % Czas (Średnia z 3 szyfrowań dla stabilności)
+                % Time (Average of 3 encryptions for stability)
                 res.times_enc(i, run_idx) = mean([t1, t2, t3]);
                 res.times_dec(i, run_idx) = t_dec;
                 
-                % Jakość (Entropy/Corr liczymy dla środkowego wariantu)
+                % Quality (Entropy/Corr calculated for the middle variant)
                 res.entropy(i, run_idx) = calculate_entropy(C1_mid);
                 [ch, cv, cd] = calculate_correlation(C1_mid);
                 res.corr_h(i, run_idx) = ch;
                 res.corr_v(i, run_idx) = cv;
                 res.corr_d(i, run_idx) = cd;
                 
-                % NPCR / UACI (Dla każdego wariantu osobno)
+                % NPCR / UACI (Separately for each variant)
                 [n_s, u_s] = calculate_npcr_uaci(C1_start, C2_start);
                 [n_m, u_m] = calculate_npcr_uaci(C1_mid, C2_mid);
                 [n_e, u_e] = calculate_npcr_uaci(C1_end, C2_end);
@@ -76,7 +75,7 @@ function res = run_benchmarks(data, config)
                 res.npcr_mid(i, run_idx)   = n_m; res.uaci_mid(i, run_idx)   = u_m;
                 res.npcr_end(i, run_idx)   = n_e; res.uaci_end(i, run_idx)   = u_e;
                 
-                % Zapisz obrazy (dla galerii - wariant Mid)
+                % Save images (for gallery - Mid variant)
                 if run_idx == 1
                     res.images_enc{i} = C1_mid;
                     res.images_dec{i} = PT;
